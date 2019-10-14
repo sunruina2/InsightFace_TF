@@ -34,7 +34,7 @@ def get_parser():
     parser.add_argument('--ckpt_interval', default=5000, help='intervals to save ckpt file')
     parser.add_argument('--validate_interval', default=2000, help='intervals to save ckpt file')
     parser.add_argument('--show_info_interval', default=20, help='intervals to show information')
-    parser.add_argument('--num_gpus', default=2, help='the num of gpus')
+    parser.add_argument('--num_gpus', default=[0, 1], help='the num of gpus')
     parser.add_argument('--tower_name', default='tower', help='tower name')
     args = parser.parse_args()
     return args
@@ -89,8 +89,8 @@ if __name__ == '__main__':
     labels = tf.placeholder(name='img_labels', shape=[None, ], dtype=tf.int64)
     dropout_rate = tf.placeholder(name='dropout_rate', dtype=tf.float32)
     # splits input to different gpu
-    images_s = tf.split(images, num_or_size_splits=args.num_gpus, axis=0)
-    labels_s = tf.split(labels, num_or_size_splits=args.num_gpus, axis=0)
+    images_s = tf.split(images, num_or_size_splits=len(args.num_gpus), axis=0)
+    labels_s = tf.split(labels, num_or_size_splits=len(args.num_gpus), axis=0)
     # 2 prepare train datasets and test datasets by using tensorflow dataset api
     # 2.1 train datasets
     # the image is substracted 127.5 and multiplied 1/128.
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     drop_dict = {}
     loss_keys = []
     with tf.variable_scope(tf.get_variable_scope()):
-      for i in range(args.num_gpus):
+      for i in args.num_gpus:
         with tf.device('/gpu:%d' % i):
           with tf.name_scope('%s_%d' % (args.tower_name, i)) as scope:
             net = get_resnet(images_s[i], args.net_depth, type='ir', w_init=w_init_method, trainable=True, keep_rate=dropout_rate)
@@ -244,7 +244,7 @@ if __name__ == '__main__':
                 if count >= 0 and count % args.validate_interval == 0:
                     feed_dict_test ={dropout_rate: 1.0}
                     results = ver_test(ver_list=ver_list, ver_name_list=ver_name_list, nbatch=count, sess=sess,
-                             embedding_tensor=embedding_tensor, batch_size=args.batch_size//args.num_gpus, feed_dict=feed_dict_test,
+                             embedding_tensor=embedding_tensor, batch_size=args.batch_size//len(args.num_gpus), feed_dict=feed_dict_test,
                              input_placeholder=images_test)
                     if max(results) > 0.998:
                         print('best accuracy is %.5f' % max(results))

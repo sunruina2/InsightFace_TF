@@ -39,11 +39,13 @@ following snippet:
 """
 
 import tensorlayer as tl
+import tensorflow as tf
 from tensorlayer.layers import *
 from scipy.misc import imread, imresize
 from nets.imagenet_classes import *
 import os
-
+import numpy as np
+import time
 
 def _conv_layers(net_in):
     with tf.name_scope('preprocess'):

@@ -9,17 +9,18 @@ from verification import ver_test
 
 def get_args():
     parser = argparse.ArgumentParser(description='input information')
-    parser.add_argument('--ckpt_file', default='/home/aurora/workspaces2018/InsightFace_TF/output/ckpt_model_c/InsightFace_iter_best_',
-                       type=str, help='the ckpt file path')
     # parser.add_argument('--eval_datasets', default=['lfw', 'cfp_ff', 'cfp_fp', 'agedb_30'], help='evluation datasets')
     parser.add_argument('--eval_datasets', default=['agedb_30'], help='evluation datasets')
-    parser.add_argument('--eval_db_path', default='./datasets/faces_ms1m_112x112', help='evluate datasets base path')
+    parser.add_argument('--eval_db_path', default='../ver_data', help='evluate datasets base path')
     parser.add_argument('--image_size', default=[112, 112], help='the image size')
     parser.add_argument('--net_depth', default=50, help='resnet depth, default is 50')
     parser.add_argument('--num_output', default=85164, help='the image size')
     parser.add_argument('--batch_size', default=32, help='batch size to train network')
+    parser.add_argument('--ckpt_file', default='../auroua_intf/InsightFace_iter_best_',
+                       type=str, help='the ckpt file path')
     parser.add_argument('--ckpt_index_list',
                         default=['1950000.ckpt'], help='ckpt file indexes')
+
     args = parser.parse_args()
     return args
 
