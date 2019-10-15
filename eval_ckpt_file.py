@@ -5,7 +5,8 @@ from losses.face_losses import arcface_loss
 from nets.L_Resnet_E_IR import get_resnet
 import tensorlayer as tl
 from verification import ver_test
-
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 
 def get_args():
     parser = argparse.ArgumentParser(description='input information')
@@ -46,7 +47,9 @@ if __name__ == '__main__':
     # 3.2 get arcface loss
     logit = arcface_loss(embedding=net.outputs, labels=labels, w_init=w_init_method, out_num=args.num_output)
 
-    sess = tf.Session()
+    gpu_config = tf.ConfigProto()  
+    gpu_config.gpu_options.allow_growth = True 
+    sess = tf.Session(config=gpu_config)
     saver = tf.train.Saver()
 
     result_index = []
