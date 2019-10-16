@@ -106,7 +106,7 @@ if __name__ == '__main__':
     ver_name_list = []
     for db in args.eval_datasets:
         print('begin db %s convert.' % db)
-        data_set = load_bin(db, args.image_size, args)
+        data_set = load_bin(db, args.image_size, args.eval_db_path)
         ver_list.append(data_set)
         ver_name_list.append(db)
 

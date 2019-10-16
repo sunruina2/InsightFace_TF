@@ -32,20 +32,20 @@ if __name__ == '__main__':
     ver_name_list = []
     for db in args.eval_datasets:
         print('begin db %s convert.' % db)
-        data_set = load_bin(db, args.image_size, args)
+        data_set = load_bin(db, args.image_size, args)  # (data_list, issame_list)，len(data_list)=2 ,data_list[0].shape=(12000, 112, 112, 3), len(issame_list) = 6000
         ver_list.append(data_set)
         ver_name_list.append(db)
 
-    images = tf.placeholder(name='img_inputs', shape=[None, *args.image_size, 3], dtype=tf.float32)
-    labels = tf.placeholder(name='img_labels', shape=[None, ], dtype=tf.int64)
+    images = tf.placeholder(name='img_inputs', shape=[None, *args.image_size, 3], dtype=tf.float32)  # (?, 112, 112, 3)
+    labels = tf.placeholder(name='img_labels', shape=[None, ], dtype=tf.int64)  # (?, )
     dropout_rate = tf.placeholder(name='dropout_rate', dtype=tf.float32)
 
-    w_init_method = tf.contrib.layers.xavier_initializer(uniform=False)
-    net = get_resnet(images, args.net_depth, type='ir', w_init=w_init_method, trainable=False, keep_rate=dropout_rate)
+    w_init_method = tf.contrib.layers.xavier_initializer(uniform=False)  # 随机初始化权重先把空架子搭起来，后续再往里面restore train好的权重
+    net = get_resnet(images, args.net_depth, type='ir', w_init=w_init_method, trainable=False, keep_rate=dropout_rate)  # L_Resnet_E_IR (?, 112,112,3)>(?, 512)
     embedding_tensor = net.outputs
     # mv_mean = tl.layers.get_variables_with_name('resnet_v1_50/bn0/moving_mean', False, True)[0]
     # 3.2 get arcface loss
-    logit = arcface_loss(embedding=net.outputs, labels=labels, w_init=w_init_method, out_num=args.num_output)
+    logit = arcface_loss(embedding=net.outputs, labels=labels, w_init=w_init_method, out_num=args.num_output)  # (?, 512)，(?,)，initializer ，85164
 
     gpu_config = tf.ConfigProto()  
     gpu_config.gpu_options.allow_growth = True 

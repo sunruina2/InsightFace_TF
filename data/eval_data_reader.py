@@ -113,25 +113,25 @@ def mx2tfrecords_eval_data(args, db_name):
     writer_img.close()
 
 
-def load_bin(db_name, image_size, args):
-    bins, issame_list = pickle.load(open(os.path.join(args.eval_db_path, db_name+'.bin'), 'rb'), encoding='bytes')
+def load_bin(db_name, image_size, eval_db_path):
+    bins, issame_list = pickle.load(open(os.path.join(eval_db_path, db_name+'.bin'), 'rb'), encoding='bytes')  # 12000, 6000
     data_list = []
-    for _ in [0,1]:
-        data = np.empty((len(issame_list)*2, image_size[0], image_size[1], 3))
+    for _ in [0, 1]:
+        data = np.empty((len(issame_list)*2, image_size[0], image_size[1], 3))  # (12000, 112, 112, 3)
         data_list.append(data)
-    for i in range(len(issame_list)*2):
+    for i in range(len(issame_list)*2):  # 12000
         _bin = bins[i]
-        img = mx.image.imdecode(_bin).asnumpy()
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        for flip in [0,1]:
+        img = mx.image.imdecode(_bin).asnumpy()  # <class 'tuple'>: (112, 112, 3)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)  # <class 'tuple'>: (112, 112, 3) 测试集有变为灰度
+        for flip in [0, 1]:
             if flip == 1:
                 img = np.fliplr(img)
-            data_list[flip][i, ...] = img
+            data_list[flip][i, ...] = img  # [2, ?, 112, 112, 3], 0位置是原图，1位置是翻转图
         i += 1
         if i % 1000 == 0:
             print('loading bin', i)
-    print(data_list[0].shape)
-    return data_list, issame_list
+    print(data_list[0].shape)  # (12000, 112, 112, 3)
+    return data_list, issame_list  # [正(12000, 112, 112, 3), 反(12000, 112, 112, 3)], 6000
 
 
 if __name__ == '__main__':
