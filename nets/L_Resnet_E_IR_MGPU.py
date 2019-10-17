@@ -3,7 +3,10 @@ import tensorlayer as tl
 from tensorflow.contrib.layers.python.layers import utils
 import collections
 from tl_layers_modify import ElementwiseLayer, BatchNormLayer, Conv2d, PReluLayer, DenseLayer
-
+# MGPU和issue9的主要区别点：
+# （1）layer>>BatchNormLayer, Conv2d, PReluLayer, DenseLayer在Layer源码上修改：加上了 /cpu:0 ,并定义dtype=D_type
+# （2）get_resnet不再传入reuse=False
+# （3）dropout改用layer的，不用nn的了
 
 def subsample(inputs, factor, scope=None):
     if factor == 1:
@@ -118,6 +121,7 @@ def bottleneck_IR_SE(inputs, depth, depth_bottleneck, stride, rate=1, w_init=Non
         return output
 
 
+# MGPU 去掉reuse=False,参数
 def resnet(inputs, bottle_neck, blocks, w_init=None, trainable=None, keep_rate=None, scope=None):
     with tf.variable_scope(scope):
         net_inputs = tl.layers.InputLayer(inputs, name='input_layer')
@@ -136,6 +140,7 @@ def resnet(inputs, bottle_neck, blocks, w_init=None, trainable=None, keep_rate=N
                                             w_init=w_init, stride=var['stride'], rate=var['rate'], scope=None,
                                             trainable=trainable)
         net = BatchNormLayer(net, act=tf.identity, is_train=True, name='E_BN1', trainable=trainable)
+        # MGPU issue_old：net.outputs = tf.nn.dropout(net.outputs, keep_prob=keep_rate, name='E_Dropout')
         net = tl.layers.DropoutLayer(net, keep=keep_rate, name='E_Dropout')
         net_shape = net.outputs.get_shape()
         net = tl.layers.ReshapeLayer(net, shape=[-1, net_shape[1]*net_shape[2]*net_shape[3]], name='E_Reshapelayer')
@@ -183,6 +188,7 @@ def resnetse_v1_block(scope, base_depth, num_units, stride, rate=1, unit_fn=None
   }] * (num_units - 1))
 
 
+# MGPU 去掉reuse=False,参数
 def get_resnet(inputs, num_layers, type=None, w_init=None, trainable=None, keep_rate=None, sess=None):
     if type == 'ir':
         unit_fn = bottleneck_IR
@@ -214,6 +220,7 @@ def get_resnet(inputs, num_layers, type=None, w_init=None, trainable=None, keep_
         ]
     else:
         raise ValueError('Resnet layer %d is not supported now.' % num_layers)
+    # MGPU 去掉reuse=False,参数
     net = resnet(inputs=inputs,
                  bottle_neck=True,
                  blocks=blocks,

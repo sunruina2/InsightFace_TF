@@ -124,8 +124,8 @@ class BatchNormLayer(Layer):
             ## 1. beta, gamma
             if tf.__version__ > '0.12.1' and beta_init == tf.zeros_initializer:
                 beta_init = beta_init()
-            with tf.device('/cpu:0'):
-                beta = tf.get_variable('beta', shape=params_shape, initializer=beta_init, dtype=tf.float32, trainable=is_train)  #, restore=restore)
+            with tf.device('/cpu:0'):  # MGPU 增加 '/cpu:0'，(以及dtype=D_TYPE)
+                beta = tf.get_variable('beta', shape=params_shape, initializer=beta_init, dtype=D_TYPE, trainable=is_train)  #, restore=restore)
 
                 gamma = tf.get_variable(
                     'gamma',
@@ -140,8 +140,8 @@ class BatchNormLayer(Layer):
                 moving_mean_init = tf.zeros_initializer()
             else:
                 moving_mean_init = tf.zeros_initializer
-            with tf.device('/cpu:0'):
-                moving_mean = tf.get_variable('moving_mean', params_shape, initializer=moving_mean_init, dtype=tf.float32, trainable=False)  #   restore=restore)
+            with tf.device('/cpu:0'):  # MGPU 增加 '/cpu:0'，(以及dtype=D_TYPE)
+                moving_mean = tf.get_variable('moving_mean', params_shape, initializer=moving_mean_init, dtype=D_TYPE, trainable=False)  #   restore=restore)
                 moving_variance = tf.get_variable(
                     'moving_variance',
                     params_shape,
@@ -328,10 +328,10 @@ class Conv2dLayer(Layer):
         print("  [TL] Conv2dLayer %s: shape:%s strides:%s pad:%s act:%s" % (self.name, str(shape), str(strides), padding, act.__name__))
 
         with tf.variable_scope(name) as vs:
-            with tf.device('/cpu:0'):
+            with tf.device('/cpu:0'):  # MGPU 增加 '/cpu:0'，(以及dtype=D_TYPE)
                 W = tf.get_variable(name='W_conv2d', shape=shape, initializer=W_init, dtype=D_TYPE, **W_init_args)
             if b_init:
-                with tf.device('/cpu:0'):
+                with tf.device('/cpu:0'):  # MGPU 增加 '/cpu:0'，(以及dtype=D_TYPE)
                     b = tf.get_variable(name='b_conv2d', shape=(shape[-1]), initializer=b_init, dtype=D_TYPE, **b_init_args)
                 self.outputs = act(
                     tf.nn.conv2d(self.inputs, W, strides=strides, padding=padding, use_cudnn_on_gpu=use_cudnn_on_gpu, data_format=data_format) + b)
@@ -387,7 +387,7 @@ class PReluLayer(Layer):
 
         # with tf.name_scope(name) as scope:
         with tf.variable_scope(name) as vs:
-            with tf.device('/cpu:0'):
+            with tf.device('/cpu:0'):  # MGPU 增加 '/cpu:0'，(以及dtype=D_TYPE)
                 alphas = tf.get_variable(name='alphas', shape=w_shape, initializer=a_init, dtype=D_TYPE, **a_init_args)
             try:  ## TF 1.0
                 self.outputs = tf.nn.relu(self.inputs) + tf.multiply(alphas, (self.inputs - tf.abs(self.inputs))) * 0.5
@@ -469,14 +469,14 @@ class DenseLayer(Layer):
         self.n_units = n_units
         print("  [TL] DenseLayer  %s: %d %s" % (self.name, self.n_units, act.__name__))
         with tf.variable_scope(name) as vs:
-            with tf.device('/cpu:0'):
+            with tf.device('/cpu:0'):  # MGPU 增加 '/cpu:0'，(以及dtype=D_TYPE)
                 W = tf.get_variable(name='W', shape=(n_in, n_units), initializer=W_init, dtype=D_TYPE, **W_init_args)
             if b_init is not None:
                 try:
-                    with tf.device('/cpu:0'):
+                    with tf.device('/cpu:0'):  # MGPU 增加 '/cpu:0'，(以及dtype=D_TYPE)
                         b = tf.get_variable(name='b', shape=(n_units), initializer=b_init, dtype=D_TYPE, **b_init_args)
                 except:  # If initializer is a constant, do not specify shape.
-                    with tf.device('/cpu:0'):
+                    with tf.device('/cpu:0'):  # MGPU 增加 '/cpu:0'，(以及dtype=D_TYPE)
                         b = tf.get_variable(name='b', initializer=b_init, dtype=D_TYPE, **b_init_args)
                 self.outputs = act(tf.matmul(self.inputs, W) + b)
             else:
