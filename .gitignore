@@ -5,3 +5,4 @@ nohup.out
 logs/*
 summary/*
 ckpt/*
+*.out
