@@ -102,7 +102,8 @@ if __name__ == '__main__':
     ckpt_interval = 5000  # intervals to save ckpt file  # MGPU 变小/2
     validate_interval = 2000  # intervals to save ckpt file
     show_info_interval = 20  # intervals to show information
-    num_gpus = [1, 3]  # the num of gpus')  # MGPU
+    num_gpus = [0, 1]  # the num of gpus')  # MGPU
+    device_gpus = [1, 3]  # the access device of gpus')  # MGPU
     tower_name = 'tower'  # tower name')  # MGPU
 
     global_step = tf.Variable(name='global_step', initial_value=0, trainable=False)
@@ -154,7 +155,7 @@ if __name__ == '__main__':
     loss_keys = []
     with tf.variable_scope(tf.get_variable_scope()):
       for i in num_gpus:
-        with tf.device('/gpu:%d' % i):
+        with tf.device('/gpu:%d' % device_gpus[i]):
           with tf.name_scope('%s_%d' % (tower_name, i)) as scope:
             net = get_resnet(images_s[i], net_depth, type='ir', w_init=w_init_method, trainable=True, keep_rate=dropout_rate)
             logit = arcface_loss(embedding=net.outputs, labels=labels_s[i], w_init=w_init_method, out_num=num_output)
