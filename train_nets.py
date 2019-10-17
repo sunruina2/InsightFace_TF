@@ -43,7 +43,7 @@ def get_parser():
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
     # 1. define global parameters
 
     net_depth = 50  # resnet depth, default is 50
@@ -52,16 +52,16 @@ if __name__ == '__main__':
     lr_steps = [40000, 60000, 80000]  # learning rate to train network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
-    eval_datasets = ['lfw']  # evluation datasets
+    eval_datasets = ['lfw', 'cfp_fp']  # evluation datasets
     eval_db_path = '../ver_data'  # evluate datasets base path
     image_size = [112, 112]  # the image size
     num_output = 85164  # the image size
     tfrecords_file_path = '../train_data'  # path to the output of tfrecords file path
-    summary_path = '../auroua_output/summary'  # the summary file save path
-    ckpt_path = '../auroua_output/ckpt'  # the ckpt file save path
-    log_file_path = '../auroua_output/logs'  # the ckpt file save path
+    summary_path = '../auroua_output/para_50_128/summary'  # the summary file save path
+    ckpt_path = '../auroua_output/para_50_128/ckpt'  # the ckpt file save path
+    log_file_path = '../auroua_output/para_50_128/logs'  # the ckpt file save path
     saver_maxkeep = 100  # tf.train.Saver max keep ckpt files
-    buffer_size = 10000  # tf dataset api buffer size ?
+    buffer_size = 100000  # tf dataset api buffer size ?
     log_device_mapping = False  # show device placement log
     summary_interval = 300  # interval to save summary
     ckpt_interval = 10000  # intervals to save ckpt file
@@ -170,9 +170,9 @@ if __name__ == '__main__':
     saver = tf.train.Saver(max_to_keep=saver_maxkeep)
     # 3.13 init all variables
     sess.run(tf.global_variables_initializer())
-
-    restore_saver = tf.train.Saver()
-    restore_saver.restore(sess,  ckpt_path + '/InsightFace_iter_'+'90000'+'.ckpt')
+    
+    # restore_saver = tf.train.Saver()  # 继续训练的话，将这两行打开
+    # restore_saver.restore(sess,  ckpt_path + '/InsightFace_iter_'+'90000'+'.ckpt')
     # 4 begin iteration
     if not os.path.exists(log_file_path):
         os.makedirs(log_file_path)
