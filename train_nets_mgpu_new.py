@@ -28,18 +28,18 @@ def get_parser():
     parser.add_argument('--summary_path', default='./output/summary', help='the summary file save path')
     parser.add_argument('--ckpt_path', default='./output/ckpt', help='the ckpt file save path')
     parser.add_argument('--saver_maxkeep', default=100, help='tf.train.Saver max keep ckpt files')
-    parser.add_argument('--buffer_size', default=100000, help='tf dataset api buffer size')
-    parser.add_argument('--log_device_mapping', default=False, help='show device placement log')
+    parser.add_argument('--buffer_size', default=100000, help='tf dataset api buffer size')  # MGPU 变大*10
+    parser.add_argument('--log_device_mapping', default=False, help='show device placement log')  # MGPU 删掉了log_file_path参数
     parser.add_argument('--summary_interval', default=300, help='interval to save summary')
-    parser.add_argument('--ckpt_interval', default=5000, help='intervals to save ckpt file')
+    parser.add_argument('--ckpt_interval', default=5000, help='intervals to save ckpt file')  # MGPU 变小/2
     parser.add_argument('--validate_interval', default=2000, help='intervals to save ckpt file')
     parser.add_argument('--show_info_interval', default=20, help='intervals to show information')
-    parser.add_argument('--num_gpus', default=[0, 1], help='the num of gpus')
-    parser.add_argument('--tower_name', default='tower', help='tower name')
+    parser.add_argument('--num_gpus', default=[0, 1], help='the num of gpus')  # MGPU
+    parser.add_argument('--tower_name', default='tower', help='tower name')  # MGPU
     args = parser.parse_args()
     return args
 
-
+#  MGPU
 def average_gradients(tower_grads):
   """Calculate the average gradient for each shared variable across all towers.
 
@@ -81,47 +81,71 @@ def average_gradients(tower_grads):
 if __name__ == '__main__':
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # 1. define global parameters
-    args = get_parser()
+    # args = get_parser()
+    net_depth = 100  # resnet depth, default is 50
+    epoch = 100000  # epoch to train the network
+    batch_size = 64  # batch size to train network
+    lr_steps = [40000, 60000, 80000]  # learning rate to train network
+    momentum = 0.9  # learning alg momentum
+    weight_deacy = 5e-4  # learning alg momentum
+    eval_datasets = ['lfw', 'cfp_fp']  # evluation datasets
+    eval_db_path = '../ver_data'  # evluate datasets base path
+    image_size = [112, 112]  # the image size
+    num_output = 85164  # the image size
+    tfrecords_file_path = '../train_data'  # path to the output of tfrecords file path
+    summary_path = '../auroua_output/mgpu_out/summary'  # the summary file save path
+    ckpt_path = '../auroua_output/mgpu_out/ckpt'  # the ckpt file save path
+    saver_maxkeep = 100  # tf.train.Saver max keep ckpt files
+    buffer_size = 100000  # tf dataset api buffer size  # MGPU 变大*10
+    log_device_mapping = False  # show device placement log  # MGPU 删掉了log_file_path参数
+    summary_interval = 300  # interval to save summary
+    ckpt_interval = 5000  # intervals to save ckpt file  # MGPU 变小/2
+    validate_interval = 2000  # intervals to save ckpt file
+    show_info_interval = 20  # intervals to show information
+    num_gpus = [1, 3]  # the num of gpus')  # MGPU
+    tower_name = 'tower'  # tower name')  # MGPU
+
     global_step = tf.Variable(name='global_step', initial_value=0, trainable=False)
     inc_op = tf.assign_add(global_step, 1, name='increment_global_step')
-    images = tf.placeholder(name='img_inputs', shape=[None, *args.image_size, 3], dtype=tf.float32)
-    images_test = tf.placeholder(name='img_inputs', shape=[None, *args.image_size, 3], dtype=tf.float32)
+    images = tf.placeholder(name='img_inputs', shape=[None, *image_size, 3], dtype=tf.float32)
+    images_test = tf.placeholder(name='img_inputs', shape=[None, *image_size, 3], dtype=tf.float32)  # MGPU
     labels = tf.placeholder(name='img_labels', shape=[None, ], dtype=tf.int64)
     dropout_rate = tf.placeholder(name='dropout_rate', dtype=tf.float32)
-    # splits input to different gpu
-    images_s = tf.split(images, num_or_size_splits=len(args.num_gpus), axis=0)
-    labels_s = tf.split(labels, num_or_size_splits=len(args.num_gpus), axis=0)
+    # splits input to different gpu    # MGPU
+    images_s = tf.split(images, num_or_size_splits=len(num_gpus), axis=0)  # MGPU
+    labels_s = tf.split(labels, num_or_size_splits=len(num_gpus), axis=0)  # MGPU
     # 2 prepare train datasets and test datasets by using tensorflow dataset api
     # 2.1 train datasets
     # the image is substracted 127.5 and multiplied 1/128.
     # random flip left right
-    tfrecords_f = os.path.join(args.tfrecords_file_path, 'tran.tfrecords')
+    tfrecords_f = os.path.join(tfrecords_file_path, 'ms1.tfrecords')
     dataset = tf.data.TFRecordDataset(tfrecords_f)
     dataset = dataset.map(parse_function)
-    dataset = dataset.shuffle(buffer_size=args.buffer_size)
-    dataset = dataset.batch(args.batch_size)
+    dataset = dataset.shuffle(buffer_size=buffer_size)
+    dataset = dataset.batch(batch_size)
     iterator = dataset.make_initializable_iterator()
     next_element = iterator.get_next()
     # 2.2 prepare validate datasets
     ver_list = []
     ver_name_list = []
-    for db in args.eval_datasets:
+    for db in eval_datasets:
         print('begin db %s convert.' % db)
-        data_set = load_bin(db, args.image_size, args.eval_db_path)
+        data_set = load_bin(db, image_size, eval_db_path)
         ver_list.append(data_set)
         ver_name_list.append(db)
     # 3. define network, loss, optimize method, learning rate schedule, summary writer, saver
     # 3.1 inference phase
     w_init_method = tf.contrib.layers.xavier_initializer(uniform=False)
     # 3.2 define the learning rate schedule
-    p = int(512.0/args.batch_size)
-    lr_steps = [p*val for val in args.lr_steps]
+    p = int(512.0/batch_size)
+    lr_steps = [p*val for val in lr_steps]
     print('learning rate steps: ', lr_steps)
     lr = tf.train.piecewise_constant(global_step, boundaries=lr_steps, values=[0.001, 0.0005, 0.0003, 0.0001],
                                      name='lr_schedule')
     # 3.3 define the optimize method
-    opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=args.momentum)
+    opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=momentum)
 
+    # MGPU-start
     # Calculate the gradients for each model tower.
     tower_grads = []
     tl.layers.set_name_reuse(True)
@@ -129,11 +153,11 @@ if __name__ == '__main__':
     drop_dict = {}
     loss_keys = []
     with tf.variable_scope(tf.get_variable_scope()):
-      for i in args.num_gpus:
+      for i in num_gpus:
         with tf.device('/gpu:%d' % i):
-          with tf.name_scope('%s_%d' % (args.tower_name, i)) as scope:
-            net = get_resnet(images_s[i], args.net_depth, type='ir', w_init=w_init_method, trainable=True, keep_rate=dropout_rate)
-            logit = arcface_loss(embedding=net.outputs, labels=labels_s[i], w_init=w_init_method, out_num=args.num_output)
+          with tf.name_scope('%s_%d' % (tower_name, i)) as scope:
+            net = get_resnet(images_s[i], net_depth, type='ir', w_init=w_init_method, trainable=True, keep_rate=dropout_rate)
+            logit = arcface_loss(embedding=net.outputs, labels=labels_s[i], w_init=w_init_method, out_num=num_output)
             # Reuse variables for the next tower.
             tf.get_variable_scope().reuse_variables()
             # define the cross entropy
@@ -141,15 +165,15 @@ if __name__ == '__main__':
             # define weight deacy losses
             wd_loss = 0
             for weights in tl.layers.get_variables_with_name('W_conv2d', True, True):
-                wd_loss += tf.contrib.layers.l2_regularizer(args.weight_deacy)(weights)
+                wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(weights)
             for W in tl.layers.get_variables_with_name('resnet_v1_50/E_DenseLayer/W', True, True):
-                wd_loss += tf.contrib.layers.l2_regularizer(args.weight_deacy)(W)
+                wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(W)
             for weights in tl.layers.get_variables_with_name('embedding_weights', True, True):
-                wd_loss += tf.contrib.layers.l2_regularizer(args.weight_deacy)(weights)
+                wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(weights)
             for gamma in tl.layers.get_variables_with_name('gamma', True, True):
-                wd_loss += tf.contrib.layers.l2_regularizer(args.weight_deacy)(gamma)
+                wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(gamma)
             for alphas in tl.layers.get_variables_with_name('alphas', True, True):
-                wd_loss += tf.contrib.layers.l2_regularizer(args.weight_deacy)(alphas)
+                wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(alphas)
             total_loss = inference_loss + wd_loss
 
             loss_dict[('inference_loss_%s_%d' % ('gpu', i))] = inference_loss
@@ -161,22 +185,23 @@ if __name__ == '__main__':
             grads = opt.compute_gradients(total_loss)
             tower_grads.append(grads)
             if i == 0:
-                test_net = get_resnet(images_test, args.net_depth, type='ir', w_init=w_init_method, trainable=False, keep_rate=dropout_rate)
+                test_net = get_resnet(images_test, net_depth, type='ir', w_init=w_init_method, trainable=False, keep_rate=dropout_rate)
                 embedding_tensor = test_net.outputs
                 update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
                 pred = tf.nn.softmax(logit)
                 acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(pred, axis=1), labels_s[i]), dtype=tf.float32))
 
     grads = average_gradients(tower_grads)
+    # Apply the gradients to adjust the shared variables.
+    # MGPU-END
     with tf.control_dependencies(update_ops):
-        # Apply the gradients to adjust the shared variables.
         train_op = opt.apply_gradients(grads, global_step=global_step)
 
-    config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=args.log_device_mapping)
+    config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=log_device_mapping)
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
     # summary writer
-    summary = tf.summary.FileWriter(args.summary_path, sess.graph)
+    summary = tf.summary.FileWriter(summary_path, sess.graph)
     summaries = []
     # add grad histogram op
     for grad, var in grads:
@@ -193,12 +218,12 @@ if __name__ == '__main__':
     summary_op = tf.summary.merge(summaries)
 
     # Create a saver.
-    saver = tf.train.Saver(tf.global_variables())
+    saver = tf.train.Saver(tf.global_variables())  # MGPU 没加 max_to_keep=args.saver_maxkeep ，加了tf.global_variables()
     # init all variables
     sess.run(tf.global_variables_initializer())
     # begin iteration
     count = 0
-    for i in range(args.epoch):
+    for i in range(epoch):
         sess.run(iterator.initializer)
         while True:
             try:
@@ -212,44 +237,44 @@ if __name__ == '__main__':
                                                                          loss_dict[loss_keys[3]],
                                                                          loss_dict[loss_keys[4]],
                                                                          loss_dict[loss_keys[5]], acc],
-                                                                         feed_dict=feed_dict)
+                                                                         feed_dict=feed_dict)  # MGPU Loss不同
                 end = time.time()
-                pre_sec = args.batch_size/(end - start)
+                pre_sec = batch_size/(end - start)
                 # print training information
-                if count > 0 and count % args.show_info_interval == 0:
+                if count > 0 and count % show_info_interval == 0:
                     # print('epoch %d, total_step %d, total loss gpu 1 is %.2f , inference loss gpu 1 is %.2f, weight deacy '
                     #       'loss gpu 1 is %.2f, total loss gpu 2 is %.2f , inference loss gpu 2 is %.2f, weight deacy '
                     #       'loss gpu 2 is %.2f, training accuracy is %.6f, time %.3f samples/sec' %
                     #       (i, count, total_loss_gpu_1, inference_loss_val_gpu_1, wd_loss_val_gpu_1, total_loss_gpu_2,
                     #        inference_loss_val_gpu_2, wd_loss_val_gpu_2, acc_val, pre_sec))
 
-                    print('epoch %d, total_step %d, total loss: [%.2f, %.2f], inference loss: [%.2f, %.2f], weight deacy '
+                    print(time.strftime("%Y%m%d%H%M%S", time.localtime()), ' epoch %d, total_step %d, total loss: [%.2f, %.2f], inference loss: [%.2f, %.2f], weight deacy '
                           'loss: [%.2f, %.2f], training accuracy is %.6f, time %.3f samples/sec' %
                           (i, count, total_loss_gpu_1, total_loss_gpu_2, inference_loss_val_gpu_1, inference_loss_val_gpu_2,
                            wd_loss_val_gpu_1, wd_loss_val_gpu_2, acc_val, pre_sec))
                 count += 1
 
                 # save summary
-                if count > 0 and count % args.summary_interval == 0:
+                if count > 0 and count % summary_interval == 0:
                     feed_dict = {images: images_train, labels: labels_train, dropout_rate: 0.4}
                     summary_op_val = sess.run(summary_op, feed_dict=feed_dict)
                     summary.add_summary(summary_op_val, count)
 
                 # save ckpt files
-                if count > 0 and count % args.ckpt_interval == 0:
+                if count > 0 and count % ckpt_interval == 0:
                     filename = 'InsightFace_iter_{:d}'.format(count) + '.ckpt'
-                    filename = os.path.join(args.ckpt_path, filename)
+                    filename = os.path.join(ckpt_path, filename)
                     saver.save(sess, filename)
                 # # validate
-                if count >= 0 and count % args.validate_interval == 0:
+                if count >= 0 and count % validate_interval == 0:
                     feed_dict_test ={dropout_rate: 1.0}
                     results = ver_test(ver_list=ver_list, ver_name_list=ver_name_list, nbatch=count, sess=sess,
-                             embedding_tensor=embedding_tensor, batch_size=args.batch_size//len(args.num_gpus), feed_dict=feed_dict_test,
-                             input_placeholder=images_test)
+                             embedding_tensor=embedding_tensor, batch_size=batch_size//len(num_gpus), feed_dict=feed_dict_test,
+                             input_placeholder=images_test)  # MGPU 增加////len(num_gpus)
                     if max(results) > 0.998:
                         print('best accuracy is %.5f' % max(results))
                         filename = 'InsightFace_iter_best_{:d}'.format(count) + '.ckpt'
-                        filename = os.path.join(args.ckpt_path, filename)
+                        filename = os.path.join(ckpt_path, filename)
                         saver.save(sess, filename)
             except tf.errors.OutOfRangeError:
                 print("End of epoch %d" % i)

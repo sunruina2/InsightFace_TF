@@ -198,7 +198,7 @@ if __name__ == '__main__':
                 pre_sec = batch_size/(end - start)
                 # print training information
                 if count > 0 and count % show_info_interval == 0:
-                    print('epoch %d, total_step %d, total loss is %.2f , inference loss is %.2f, weight deacy '
+                    print(time.strftime("%Y%m%d%H%M%S", time.localtime()), ' epoch %d, total_step %d, total loss is %.2f , inference loss is %.2f, weight deacy '
                           'loss is %.2f, training accuracy is %.6f, time %.3f samples/sec' %
                           (i, count, total_loss_val, inference_loss_val, wd_loss_val, acc_val, pre_sec))
                 count += 1
