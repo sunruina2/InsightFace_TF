@@ -84,7 +84,7 @@ if __name__ == '__main__':
     # args = get_parser()
     net_depth = 100  # resnet depth, default is 50
     epoch = 100000  # epoch to train the network
-    batch_size = 64  # batch size to train network
+    batch_size = 32  # batch size to train network
     lr_steps = [40000, 60000, 80000]  # learning rate to train network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
@@ -113,8 +113,8 @@ if __name__ == '__main__':
     labels = tf.placeholder(name='img_labels', shape=[None, ], dtype=tf.int64)
     dropout_rate = tf.placeholder(name='dropout_rate', dtype=tf.float32)
     # splits input to different gpu    # MGPU
-    images_s = tf.split(images, num_or_size_splits=len(num_gpus), axis=0)  # MGPU
-    labels_s = tf.split(labels, num_or_size_splits=len(num_gpus), axis=0)  # MGPU
+    images_s = tf.split(images, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
+    labels_s = tf.split(labels, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
     # 2 prepare train datasets and test datasets by using tensorflow dataset api
     # 2.1 train datasets
     # the image is substracted 127.5 and multiplied 1/128.
@@ -148,51 +148,56 @@ if __name__ == '__main__':
 
     # MGPU-start
     # Calculate the gradients for each model tower.
-    tower_grads = []
+    tower_grads = []  # 保存来自不同GPU计算出的梯度、loss列表
     tl.layers.set_name_reuse(True)
-    loss_dict = {}
+    loss_dict = {}  # 保存来自不同GPU计算出的梯度、loss列表
     drop_dict = {}
     loss_keys = []
     with tf.variable_scope(tf.get_variable_scope()):
-      for i in num_gpus:
-        with tf.device('/gpu:%d' % device_gpus[i]):
-          with tf.name_scope('%s_%d' % (tower_name, i)) as scope:
-            net = get_resnet(images_s[i], net_depth, type='ir', w_init=w_init_method, trainable=True, keep_rate=dropout_rate)
-            logit = arcface_loss(embedding=net.outputs, labels=labels_s[i], w_init=w_init_method, out_num=num_output)
-            # Reuse variables for the next tower.
-            tf.get_variable_scope().reuse_variables()
-            # define the cross entropy
-            inference_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logit, labels=labels_s[i]))
-            # define weight deacy losses
-            wd_loss = 0
-            for weights in tl.layers.get_variables_with_name('W_conv2d', True, True):
-                wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(weights)
-            for W in tl.layers.get_variables_with_name('resnet_v1_50/E_DenseLayer/W', True, True):
-                wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(W)
-            for weights in tl.layers.get_variables_with_name('embedding_weights', True, True):
-                wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(weights)
-            for gamma in tl.layers.get_variables_with_name('gamma', True, True):
-                wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(gamma)
-            for alphas in tl.layers.get_variables_with_name('alphas', True, True):
-                wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(alphas)
-            total_loss = inference_loss + wd_loss
+        for iter_gpus in num_gpus:
+            with tf.device('/gpu:%d' % device_gpus[iter_gpus]):
+                with tf.name_scope('%s_%d' % (tower_name, iter_gpus)) as scope:
+                    net = get_resnet(images_s[iter_gpus], net_depth, type='ir', w_init=w_init_method, trainable=True,
+                                     keep_rate=dropout_rate)
+                    logit = arcface_loss(embedding=net.outputs, labels=labels_s[iter_gpus], w_init=w_init_method,
+                                         out_num=num_output)
+                    # Reuse variables for the next tower.
+                    tf.get_variable_scope().reuse_variables()  # 同名变量将会复用，假设现在gpu0上创建了两个变量var0，var1，那么在gpu1上创建计算图的时候，如果还有var0和var1，则默认复用之前gpu0上的创建的那两个值
+                    # define the cross entropy
+                    inference_loss = tf.reduce_mean(
+                        tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logit, labels=labels_s[iter_gpus]))
+                    # define weight deacy losses
+                    wd_loss = 0
+                    for weights in tl.layers.get_variables_with_name('W_conv2d', True, True):
+                        wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(weights)
+                    for W in tl.layers.get_variables_with_name('resnet_v1_50/E_DenseLayer/W', True, True):
+                        wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(W)
+                    for weights in tl.layers.get_variables_with_name('embedding_weights', True, True):
+                        wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(weights)
+                    for gamma in tl.layers.get_variables_with_name('gamma', True, True):
+                        wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(gamma)
+                    for alphas in tl.layers.get_variables_with_name('alphas', True, True):
+                        wd_loss += tf.contrib.layers.l2_regularizer(weight_deacy)(alphas)
+                    total_loss = inference_loss + wd_loss
 
-            loss_dict[('inference_loss_%s_%d' % ('gpu', i))] = inference_loss
-            loss_keys.append(('inference_loss_%s_%d' % ('gpu', i)))
-            loss_dict[('wd_loss_%s_%d' % ('gpu', i))] = wd_loss
-            loss_keys.append(('wd_loss_%s_%d' % ('gpu', i)))
-            loss_dict[('total_loss_%s_%d' % ('gpu', i))] = total_loss
-            loss_keys.append(('total_loss_%s_%d' % ('gpu', i)))
-            grads = opt.compute_gradients(total_loss)
-            tower_grads.append(grads)
-            if i == 0:
-                test_net = get_resnet(images_test, net_depth, type='ir', w_init=w_init_method, trainable=False, keep_rate=dropout_rate)
-                embedding_tensor = test_net.outputs
-                update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-                pred = tf.nn.softmax(logit)
-                acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(pred, axis=1), labels_s[i]), dtype=tf.float32))
+                    loss_dict[('inference_loss_%s_%d' % ('gpu', iter_gpus))] = inference_loss
+                    loss_keys.append(('inference_loss_%s_%d' % ('gpu', iter_gpus)))
+                    loss_dict[('wd_loss_%s_%d' % ('gpu', iter_gpus))] = wd_loss
+                    loss_keys.append(('wd_loss_%s_%d' % ('gpu', iter_gpus)))
+                    loss_dict[('total_loss_%s_%d' % ('gpu', iter_gpus))] = total_loss
+                    loss_keys.append(('total_loss_%s_%d' % ('gpu', iter_gpus)))
+                    grads = opt.compute_gradients(total_loss)
+                    tower_grads.append(grads)  # 把当前GPU计算出的梯度、loss值append到列表
+                    if iter_gpus == 0:
+                        test_net = get_resnet(images_test, net_depth, type='ir', w_init=w_init_method, trainable=False,
+                                              keep_rate=dropout_rate)
+                        embedding_tensor = test_net.outputs
+                        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+                        pred = tf.nn.softmax(logit)
+                        acc = tf.reduce_mean(
+                            tf.cast(tf.equal(tf.argmax(pred, axis=1), labels_s[iter_gpus]), dtype=tf.float32))
 
-    grads = average_gradients(tower_grads)
+    grads = average_gradients(tower_grads)  # 计算不同GPU获取的grad、loss的平均值
     # Apply the gradients to adjust the shared variables.
     # MGPU-END
     with tf.control_dependencies(update_ops):
