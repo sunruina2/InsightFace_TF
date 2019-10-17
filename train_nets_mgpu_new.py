@@ -80,11 +80,12 @@ def average_gradients(tower_grads):
 
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "1, 3"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # 1. define global parameters
     # args = get_parser()
-    net_depth = 100  # resnet depth, default is 50
+    net_depth = 50  # resnet depth, default is 50
     epoch = 100000  # epoch to train the network
-    batch_size = 32  # batch size to train network
+    batch_size = 64  # batch size to train network
     lr_steps = [40000, 60000, 80000]  # learning rate to train network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
