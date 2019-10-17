@@ -79,6 +79,8 @@ def average_gradients(tower_grads):
 
 
 if __name__ == '__main__':
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1, 3"
+
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # 1. define global parameters
     # args = get_parser()
@@ -155,7 +157,7 @@ if __name__ == '__main__':
     loss_keys = []
     with tf.variable_scope(tf.get_variable_scope()):
         for iter_gpus in num_gpus:
-            with tf.device('/gpu:%d' % device_gpus[iter_gpus]):
+            with tf.device('/gpu:%d' % iter_gpus):
                 with tf.name_scope('%s_%d' % (tower_name, iter_gpus)) as scope:
                     net = get_resnet(images_s[iter_gpus], net_depth, type='ir', w_init=w_init_method, trainable=True,
                                      keep_rate=dropout_rate)
