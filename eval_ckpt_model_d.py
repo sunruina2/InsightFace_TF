@@ -2,11 +2,11 @@ import tensorflow as tf
 import argparse
 from data.eval_data_reader import load_bin
 from losses.face_losses import arcface_loss
-from nets.L_Resnet_E_IR import get_resnet
+from nets.L_Resnet_E_IR_MGPU import get_resnet
 import tensorlayer as tl
 from verification import ver_test
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 
 def get_args():
@@ -18,9 +18,11 @@ def get_args():
     parser.add_argument('--image_size', default=[112, 112], help='the image size')
     parser.add_argument('--net_depth', default=50, help='resnet depth, default is 50')
     parser.add_argument('--num_output', default=85164, help='the image size')
-    parser.add_argument('--batch_size', default=32, help='batch size to train network')
-    parser.add_argument('--ckpt_file', default='../auroua_model_c/InsightFace_iter_best_', type=str, help='the ckpt file path')
-    parser.add_argument('--ckpt_index_list', default=['1950000.ckpt'], help='ckpt file indexes')
+    parser.add_argument('--batch_size', default=16, help='batch size to train network')
+    parser.add_argument('--ckpt_file', default='../auroua_output/mgpu_out/ckpt/InsightFace_iter_', type=str, help='the ckpt file path')
+    parser.add_argument('--ckpt_index_list', default=['40000.ckpt'], help='ckpt file indexes')
+    # parser.add_argument('--ckpt_file', default='../auroua_model_c/InsightFace_iter_best_', type=str, help='the ckpt file path')
+    # parser.add_argument('--ckpt_index_list', default=['1950000.ckpt'], help='ckpt file indexes')
     # parser.add_argument('--ckpt_file', default='../auroua_model_d/InsightFace_iter_best_', type=str, help='the ckpt file path')
     # parser.add_argument('--ckpt_index_list', default=['710000.ckpt'], help='ckpt file indexes')
 
