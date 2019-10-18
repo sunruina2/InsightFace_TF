@@ -217,7 +217,8 @@ if __name__ == '__main__':
             summaries.append(tf.summary.histogram(var.op.name + '/gradients', grad))
     # add trainabel variable gradients
     for var in tf.trainable_variables():
-        summaries.append(tf.summary.histogram(var.op.name, var))
+        if var is not None:
+            summaries.append(tf.summary.histogram(var.op.name, var))
     # add loss summary
     for keys, val in loss_dict.items():
         summaries.append(tf.summary.scalar(keys, val))
