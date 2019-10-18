@@ -79,7 +79,7 @@ def average_gradients(tower_grads):
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1, 3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3"
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # 1. define global parameters
     # args = get_parser()
@@ -89,20 +89,20 @@ if __name__ == '__main__':
     lr_steps = [40000, 60000, 80000]  # learning rate to train network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
-    eval_datasets = ['lfw', 'cfp_fp']  # evluation datasets
+    eval_datasets = ['lfw', 'cplfw', 'agedb_30']  # evluation datasets
     eval_db_path = '../ver_data'  # evluate datasets base path
     image_size = [112, 112]  # the image size
     num_output = 85164  # the image size
     tfrecords_file_path = '../train_data'  # path to the output of tfrecords file path
-    summary_path = '../auroua_output/mgpu_out/summary'  # the summary file save path
-    ckpt_path = '../auroua_output/mgpu_out/ckpt'  # the ckpt file save path
+    summary_path = '../auroua_1018output/mgpu_res/summary'  # the summary file save path
+    ckpt_path = '../auroua_1018output/mgpu_res/ckpt'  # the ckpt file save path
     saver_maxkeep = 100  # tf.train.Saver max keep ckpt files
     buffer_size = 100000  # tf dataset api buffer size  # MGPU 变大*10
     log_device_mapping = False  # show device placement log  # MGPU 删掉了log_file_path参数
-    summary_interval = 300  # interval to save summary
+    summary_interval = 500  # interval to save summary
     ckpt_interval = 5000  # intervals to save ckpt file  # MGPU 变小/2
-    validate_interval = 2000  # intervals to save ckpt file
-    show_info_interval = 20  # intervals to show information
+    validate_interval = 5000  # intervals to save ckpt file
+    show_info_interval = 10  # intervals to show information
     num_gpus = [0, 1]  # the num of gpus')  # MGPU
     tower_name = 'tower'  # tower name')  # MGPU
 
@@ -215,7 +215,8 @@ if __name__ == '__main__':
             summaries.append(tf.summary.histogram(var.op.name + '/gradients', grad))
     # add trainabel variable gradients
     for var in tf.trainable_variables():
-        summaries.append(tf.summary.histogram(var.op.name, var))
+        if var is not None:
+            summaries.append(tf.summary.histogram(var.op.name, var))
     # add loss summary
     for keys, val in loss_dict.items():
         summaries.append(tf.summary.scalar(keys, val))

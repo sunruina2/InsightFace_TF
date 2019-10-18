@@ -43,7 +43,7 @@ def get_parser():
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
     # 1. define global parameters
 
     net_depth = 50  # resnet depth, default is 50
@@ -171,8 +171,8 @@ if __name__ == '__main__':
     # 3.13 init all variables
     sess.run(tf.global_variables_initializer())
     
-    # restore_saver = tf.train.Saver()  # 继续训练的话，将这两行打开
-    # restore_saver.restore(sess,  ckpt_path + '/InsightFace_iter_'+'90000'+'.ckpt')
+    restore_saver = tf.train.Saver()  # 继续训练的话，将这两行打开
+    restore_saver.restore(sess,  ckpt_path + '/InsightFace_iter_'+'50000'+'.ckpt')
     # 4 begin iteration
     if not os.path.exists(log_file_path):
         os.makedirs(log_file_path)
