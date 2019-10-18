@@ -30,7 +30,7 @@ if __name__ == '__main__':
     ver_name_list = []
     for db in args.eval_datasets:
         print('begin db %s convert.' % db)
-        data_set = load_bin(db, args.image_size, args)  # (data_list, issame_list)，len(data_list)=2 ,data_list[0].shape=(12000, 112, 112, 3), len(issame_list) = 6000
+        data_set = load_bin(db, args.image_size, args.eval_db_path)  # (data_list, issame_list)，len(data_list)=2 ,data_list[0].shape=(12000, 112, 112, 3), len(issame_list) = 6000
         ver_list.append(data_set)
         ver_name_list.append(db)
 

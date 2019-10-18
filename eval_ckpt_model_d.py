@@ -6,22 +6,23 @@ from nets.L_Resnet_E_IR import get_resnet
 import tensorlayer as tl
 from verification import ver_test
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='input information')
     # parser.add_argument('--eval_datasets', default=['lfw', 'cfp_ff', 'cfp_fp', 'agedb_30'], help='evluation datasets')
-    parser.add_argument('--eval_datasets', default=['lfw', 'cplfw', 'agedb_30'], help='evluation datasets')
+    # parser.add_argument('--eval_datasets', default=['lfw', 'cplfw', 'agedb_30'], help='evluation datasets')
+    parser.add_argument('--eval_datasets', default=['cplfw'], help='evluation datasets')
     parser.add_argument('--eval_db_path', default='../ver_data', help='evluate datasets base path')
     parser.add_argument('--image_size', default=[112, 112], help='the image size')
     parser.add_argument('--net_depth', default=50, help='resnet depth, default is 50')
     parser.add_argument('--num_output', default=85164, help='the image size')
-    parser.add_argument('--batch_size', default=96, help='batch size to train network')
-    # parser.add_argument('--ckpt_file', default='../auroua_model_c/InsightFace_iter_best_', type=str, help='the ckpt file path')
-    # parser.add_argument('--ckpt_index_list', default=['1950000.ckpt'], help='ckpt file indexes')
-    parser.add_argument('--ckpt_file', default='../auroua_model_d/InsightFace_iter_best_', type=str, help='the ckpt file path')
-    parser.add_argument('--ckpt_index_list', default=['710000.ckpt'], help='ckpt file indexes')
+    parser.add_argument('--batch_size', default=32, help='batch size to train network')
+    parser.add_argument('--ckpt_file', default='../auroua_model_c/InsightFace_iter_best_', type=str, help='the ckpt file path')
+    parser.add_argument('--ckpt_index_list', default=['1950000.ckpt'], help='ckpt file indexes')
+    # parser.add_argument('--ckpt_file', default='../auroua_model_d/InsightFace_iter_best_', type=str, help='the ckpt file path')
+    # parser.add_argument('--ckpt_index_list', default=['710000.ckpt'], help='ckpt file indexes')
 
     args = parser.parse_args()
     return args
@@ -33,7 +34,7 @@ if __name__ == '__main__':
     ver_name_list = []
     for db in args.eval_datasets:
         print('begin db %s convert.' % db)
-        data_set = load_bin(db, args.image_size, args)  # (data_list, issame_list)，len(data_list)=2 ,data_list[0].shape=(12000, 112, 112, 3), len(issame_list) = 6000
+        data_set = load_bin(db, args.image_size, args.eval_db_path)  # (data_list, issame_list)，len(data_list)=2 ,data_list[0].shape=(12000, 112, 112, 3), len(issame_list) = 6000
         ver_list.append(data_set)
         ver_name_list.append(db)
 
