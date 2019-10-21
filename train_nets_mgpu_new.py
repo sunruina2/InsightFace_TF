@@ -79,7 +79,7 @@ def average_gradients(tower_grads):
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # 1. define global parameters
     # args = get_parser()
@@ -94,8 +94,8 @@ if __name__ == '__main__':
     image_size = [112, 112]  # the image size
     num_output = 85164  # the image size
     tfrecords_file_path = '../train_data'  # path to the output of tfrecords file path
-    summary_path = '../auroua_1018output/mgpu_res/summary'  # the summary file save path
-    ckpt_path = '../auroua_1018output/mgpu_res/ckpt'  # the ckpt file save path
+    summary_path = '../auroua_1021output/mgpu_res/summary'  # the summary file save path
+    ckpt_path = '../auroua_1021output/mgpu_res/ckpt'  # the ckpt file save path
     saver_maxkeep = 100  # tf.train.Saver max keep ckpt files
     buffer_size = 100000  # tf dataset api buffer size  # MGPU 变大*10
     log_device_mapping = False  # show device placement log  # MGPU 删掉了log_file_path参数
@@ -228,6 +228,8 @@ if __name__ == '__main__':
     saver = tf.train.Saver(tf.global_variables())  # MGPU 没加 max_to_keep=args.saver_maxkeep ，加了tf.global_variables()
     # init all variables
     sess.run(tf.global_variables_initializer())
+    restore_saver = tf.train.Saver()  # 继续训练的话，将这两行打开
+    restore_saver.restore(sess,  '../auroua_1018output/mgpu_res/ckpt' + '/InsightFace_iter_'+'40000'+'.ckpt')
     # begin iteration
     count = 0
     for i in range(epoch):
