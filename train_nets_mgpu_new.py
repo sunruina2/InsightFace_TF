@@ -86,16 +86,16 @@ if __name__ == '__main__':
     net_depth = 50  # resnet depth, default is 50
     epoch = 100000  # epoch to train the network
     batch_size = 128  # batch size to train network
-    lr_steps = [40000, 60000, 80000]  # learning rate to train network
+    lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
     eval_datasets = ['lfw', 'cplfw', 'agedb_30']  # evluation datasets
     eval_db_path = '../ver_data'  # evluate datasets base path
     image_size = [112, 112]  # the image size
-    num_output = 85164  # the image size
+    num_output = 85742  # the image size
     tfrecords_file_path = '../train_data'  # path to the output of tfrecords file path
-    summary_path = '../auroua_1023output/mgpu_res/summary'  # the summary file save path
-    ckpt_path = '../auroua_1023output/mgpu_res/ckpt'  # the ckpt file save path
+    summary_path = '../auroua_1024output/mgpu_res/summary'  # the summary file save path
+    ckpt_path = '../auroua_1024output/mgpu_res/ckpt'  # the ckpt file save path
     saver_maxkeep = 100  # tf.train.Saver max keep ckpt files
     buffer_size = 100000  # tf dataset api buffer size  # MGPU 变大*10
     log_device_mapping = False  # show device placement log  # MGPU 删掉了log_file_path参数
@@ -141,7 +141,7 @@ if __name__ == '__main__':
     p = int(512.0/batch_size)
     lr_steps = [p*val for val in lr_steps]
     print('learning rate steps: ', lr_steps)
-    lr = tf.train.piecewise_constant(global_step, boundaries=lr_steps, values=[0.001, 0.001, 0.001, 0.001],
+    lr = tf.train.piecewise_constant(global_step, boundaries=lr_steps, values=[0.005, 0.001, 0.0005, 0.0003, 0.0001],
                                      name='lr_schedule')
     # 3.3 define the optimize method
     opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=momentum)
@@ -228,8 +228,8 @@ if __name__ == '__main__':
     saver = tf.train.Saver(tf.global_variables())  # MGPU 没加 max_to_keep=args.saver_maxkeep ，加了tf.global_variables()
     # init all variables
     sess.run(tf.global_variables_initializer())
-    restore_saver = tf.train.Saver()  # 继续训练的话，将这两行打开
-    restore_saver.restore(sess,  '../auroua_1022output2/mgpu_res/ckpt' + '/InsightFace_iter_'+'40000'+'.ckpt')
+    # restore_saver = tf.train.Saver()  # 继续训练的话，将这两行打开
+    # restore_saver.restore(sess,  '../auroua_1022output2/mgpu_res/ckpt' + '/InsightFace_iter_'+'40000'+'.ckpt')
     # begin iteration
     count = 0
     for i in range(epoch):
