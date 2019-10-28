@@ -1,0 +1,153 @@
+# bug 1 batch =128
+20191025003510  epoch 0, total_step 45480, total loss: [12.71, 12.15], inference loss: [5.94, 5.39], weight deacy loss: [6.76, 6.76], training accuracy is 0.375000, time 269.149 samples/sec
+Traceback (most recent call last):
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1334, in _do_call
+    return fn(*args)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1319, in _run_fn
+    options, feed_dict, fetch_list, target_list, run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1407, in _call_tf_sessionrun
+    run_metadata)
+tensorflow.python.framework.errors_impl.InvalidArgumentError: Number of ways to split should evenly divide the split dimension, but got split_dim 0 (size = 61) and num_split 2
+         [[{{node split_1}} = Split[T=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](split_1/split_dim, _arg_img_labels_0_2)]]
+         [[{{node tower_1/gradients/AddN_89/_4409}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:0", send_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device_incarnation=1, tensor_name="edge_23392_tower_1/gradients/AddN_89", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:0"]()]]
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "train_nets_mgpu_new.py", line 249, in <module>
+    feed_dict=feed_dict)  # MGPU Loss不同
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 929, in run
+    run_metadata_ptr)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1152, in _run
+    feed_dict_tensor, options, run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1328, in _do_run
+    run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1348, in _do_call
+    raise type(e)(node_def, op, message)
+tensorflow.python.framework.errors_impl.InvalidArgumentError: Number of ways to split should evenly divide the split dimension, but got split_dim 0 (size = 61) and num_split 2
+         [[node split_1 (defined at train_nets_mgpu_new.py:117)  = Split[T=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](split_1/split_dim, _arg_img_labels_0_2)]]
+         [[{{node tower_1/gradients/AddN_89/_4409}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:0", send_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device_incarnation=1, tensor_name="edge_23392_tower_1/gradients/AddN_89", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:0"]()]]
+
+Caused by op 'split_1', defined at:
+  File "train_nets_mgpu_new.py", line 117, in <module>
+    labels_s = tf.split(labels, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如
+果gpu运算能力不同，可以自己设定拆分策略）
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/ops/array_ops.py", line 1327, in split
+    axis=axis, num_split=num_or_size_splits, value=value, name=name)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/ops/gen_array_ops.py", line 8083, in split
+    "Split", split_dim=axis, value=value, num_split=num_split, name=name)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/op_def_library.py", line 787, in _apply_op_helper
+    op_def=op_def)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/util/deprecation.py", line 488, in new_func
+    return func(*args, **kwargs)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/ops.py", line 3274, in create_op
+    op_def=op_def)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/ops.py", line 1770, in __init__
+    self._traceback = tf_stack.extract_stack()
+
+InvalidArgumentError (see above for traceback): Number of ways to split should evenly divide the split dimension, but got split_dim 0 (size = 61) and num_split 2
+         [[node split_1 (defined at train_nets_mgpu_new.py:117)  = Split[T=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](split_1/split_dim, _arg_img_labels_0_2)]]
+         [[{{node tower_1/gradients/AddN_89/_4409}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:0", send_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device_incarnation=1, tensor_name="edge_23392_tower_1/gradients/AddN_89", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:0"]()]]
+
+
+
+# bug 2 batch =100
+20191026041709  epoch 0, total_step 58220, total loss: [15.95, 15.42], inference loss: [6.78, 6.25], weight deacy loss: [9.17, 9.17], training accuracy is 0.440000, time 246.301 samples/sec
+Traceback (most recent call last):
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1334, in _do_call
+    return fn(*args)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1319, in _run_fn
+    options, feed_dict, fetch_list, target_list, run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1407, in _call_tf_sessionrun
+    run_metadata)
+tensorflow.python.framework.errors_impl.InvalidArgumentError: Number of ways to split should evenly divide the split dimension, but got split_dim 0 (size = 53) and num_split 2
+         [[{{node split_1}} = Split[T=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](split_1/split_dim, _arg_img_labels_0_2)]]
+         [[{{node lr_schedule/Greater_3/_663}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:0", send_device="/job:localhost/replica:0/task:0/device:GPU:0", send_device_incarnation=1, tensor_name="edge_1259_lr_schedule/Greater_3", tensor_type=DT_BOOL, _device="/job:localhost/replica:0/task:0/device:GPU:0"](^lr_schedule/Greater_3/_662)]]
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "train_nets_mgpu_new.py", line 249, in <module>
+    feed_dict=feed_dict)  # MGPU Loss不同
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 929, in run
+    run_metadata_ptr)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1152, in _run
+    feed_dict_tensor, options, run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1328, in _do_run
+    run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1348, in _do_call
+    raise type(e)(node_def, op, message)
+tensorflow.python.framework.errors_impl.InvalidArgumentError: Number of ways to split should evenly divide the split dimension, but got split_dim 0 (size = 53) and num_split 2
+         [[node split_1 (defined at train_nets_mgpu_new.py:117)  = Split[T=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](split_1/split_dim, _arg_img_labels_0_2)]]
+         [[{{node lr_schedule/Greater_3/_663}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:0", send_device="/job:localhost/replica:0/task:0/device:GPU:0", send_device_incarnation=1, tensor_name="edge_1259_lr_schedule/Greater_3", tensor_type=DT_BOOL, _device="/job:localhost/replica:0/task:0/device:GPU:0"](^lr_schedule/Greater_3/_662)]]
+
+Caused by op 'split_1', defined at:
+  File "train_nets_mgpu_new.py", line 117, in <module>
+    labels_s = tf.split(labels, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）ze
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/ops/array_ops.py", line 1327, in split
+    axis=axis, num_split=num_or_size_splits, value=value, name=name)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/ops/gen_array_ops.py", line 8083, in split
+    "Split", split_dim=axis, value=value, num_split=num_split, name=name)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/op_def_library.py", line 787, in _apply_op_helper
+    op_def=op_def)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/util/deprecation.py", line 488, in new_func
+    return func(*args, **kwargs)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/ops.py", line 3274, in create_op
+    op_def=op_def)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/ops.py", line 1770, in __init__
+    self._traceback = tf_stack.extract_stack()
+
+InvalidArgumentError (see above for traceback): Number of ways to split should evenly divide the split dimension, but got split_dim 0 (size = 53) and num_split 2
+         [[node split_1 (defined at train_nets_mgpu_new.py:117)  = Split[T=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](split_1/split_dim, _arg_img_labels_0_2)]]
+         [[{{node lr_schedule/Greater_3/_663}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:0", send_device="/job:localhost/replica:0/task:0/device:GPU:0", send_device_incarnation=1, tensor_name="edge_1259_lr_schedule/Greater_3", tensor_type=DT_BOOL, _device="/job:localhost/replica:0/task:0/device:GPU:0"](^lr_schedule/Greater_3/_662)]]
+
+
+# bug 3 batch =128
+     20191028200425  epoch 0, total_step 45480, total loss: [12.09, 13.64], inference loss: [5.34, 6.89], weight deacy loss: [6.75, 6.75], training accuracy is 0.375000, time 271.221 samples/sec
+Traceback (most recent call last):
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1334, in _do_call
+    return fn(*args)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1319, in _run_fn
+    options, feed_dict, fetch_list, target_list, run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1407, in _call_tf_sessionrun
+    run_metadata)
+tensorflow.python.framework.errors_impl.InvalidArgumentError: Number of ways to split should evenly divide the split dimension, but got split_dim 0 (size = 61) and num_split 2
+         [[{{node split_1}} = Split[T=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](split_1/split_dim, _arg_img_labels_0_2)]]
+         [[{{node GroupCrossDeviceControlEdges_0/tower_1/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1_bn1/Identity/_1780}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device="/job:localhost/replica:0/task:0/device:CPU:0", send_device_incarnation=1, tensor_name="edge_7502_...1/Identity", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:1"]()]]
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "train_nets_mgpu_new.py", line 270, in <module>
+    feed_dict=feed_dict)  # MGPU Loss不同
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 929, in run
+    run_metadata_ptr)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1152, in _run
+    feed_dict_tensor, options, run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1328, in _do_run
+    run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1348, in _do_call
+    raise type(e)(node_def, op, message)
+tensorflow.python.framework.errors_impl.InvalidArgumentError: Number of ways to split should evenly divide the split dimension, but got split_dim 0 (size = 61) and num_split 2
+         [[node split_1 (defined at train_nets_mgpu_new.py:135)  = Split[T=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](split_1/split_dim, _arg_img_labels_0_2)]]
+         [[{{node GroupCrossDeviceControlEdges_0/tower_1/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1_bn1/Identity/_1780}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device="/job:localhost/replica:0/task:0/device:CPU:0", send_device_incarnation=1, tensor_name="edge_7502_...1/Identity", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:1"]()]]
+
+Caused by op 'split_1', defined at:
+  File "train_nets_mgpu_new.py", line 135, in <module>
+    labels_s = tf.split(labels, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 如果gpu运算能力不同，可以自己设定拆分策略
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/ops/array_ops.py", line 1327, in split
+    axis=axis, num_split=num_or_size_splits, value=value, name=name)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/ops/gen_array_ops.py", line 8083, in split
+    "Split", split_dim=axis, value=value, num_split=num_split, name=name)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/op_def_library.py", line 787, in _apply_op_helper
+    op_def=op_def)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/util/deprecation.py", line 488, in new_func
+    return func(*args, **kwargs)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/ops.py", line 3274, in create_op
+    op_def=op_def)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/ops.py", line 1770, in __init__
+    self._traceback = tf_stack.extract_stack()
+
+InvalidArgumentError (see above for traceback): Number of ways to split should evenly divide the split dimension, but got split_dim 0 (size = 61) and num_split 2
+         [[node split_1 (defined at train_nets_mgpu_new.py:135)  = Split[T=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](split_1/split_dim, _arg_img_labels_0_2)]]
+         [[{{node GroupCrossDeviceControlEdges_0/tower_1/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1_bn1/Identity/_1780}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device="/job:localhost/replica:0/task:0/device:CPU:0", send_device_incarnation=1, tensor_name="edge_7502_...1/Identity", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:1"]()]]

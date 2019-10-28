@@ -8,7 +8,7 @@ from losses.face_losses import arcface_loss
 import time
 from data.eval_data_reader import load_bin
 from verification import ver_test
-
+import math
 
 def get_parser():
     parser = argparse.ArgumentParser(description='parameters to train net')
@@ -113,29 +113,30 @@ if __name__ == '__main__':
     labels = tf.placeholder(name='img_labels', shape=[None, ], dtype=tf.int64)
     dropout_rate = tf.placeholder(name='dropout_rate', dtype=tf.float32)
     # splits input to different gpu    # MGPU
-    images_s = [i for i in range(len(num_gpus))]
-    labels_s = [i for i in range(len(num_gpus))]
-    if images.shape[0] < batch_size:  # 如果剩余不够分的话，2块gpu上都跑相同的剩余小数据集
-        print('不足一个batch')
-        for i in range(len(num_gpus)):
-            images_s[i] = images
-            labels_s[i] = labels
-    elif images.shape[0] % len(num_gpus) != 0:  # 大于等于batch size 那么就
-        last_batch_n = math.floor(images.shape[0] / len(num_gpus))
-        last_s = math.floor(images.shape[0] % len(num_gpus))
-        print('1-mgpu_n之间个batch', images.shape[0], len(num_gpus), last_batch_n, last_s)
-        for i in range(last_batch_n):
-            images_s[i] = images[i*batch_size:(i+1)*batch_size, ...]
-            labels_s[i] = labels[i*batch_size:(i+1)*batch_size, ...]
-        images_s[-1] = images[-last_s:, ...]
-        labels_s[-1] = labels[-last_s:, ...]
-    else:
-        # 还不到最后样本余数
-        images_s = tf.split(images, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同）
-        labels_s = tf.split(labels, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 如果gpu运算能力不同，可以自己设定拆分策略
-    
-    # images_s = tf.split(images, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
-    # labels_s = tf.split(labels, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
+    # images_s = [i for i in range(len(num_gpus))]
+    # labels_s = [i for i in range(len(num_gpus))]
+    # if images.shape[0] < batch_size:  # 如果剩余不够分的话，2块gpu上都跑相同的剩余小数据集
+    #     print('不足一个batch')
+    #     for i in range(len(num_gpus)):
+    #         images_s[i] = images
+    #         labels_s[i] = labels
+    # elif images.shape[0] % len(num_gpus) != 0:  # 大于等于batch size 那么就
+    #     last_batch_n = math.floor(images.shape[0] / len(num_gpus))
+    #     last_s = math.floor(images.shape[0] % len(num_gpus))
+    #     print('1-mgpu_n之间个batch', images.shape[0], len(num_gpus), last_batch_n, last_s)
+    #     for i in range(last_batch_n):
+    #         images_s[i] = images[i*batch_size:(i+1)*batch_size, ...]
+    #         labels_s[i] = labels[i*batch_size:(i+1)*batch_size, ...]
+    #     images_s[-1] = images[-last_s:, ...]
+    #     labels_s[-1] = labels[-last_s:, ...]
+    # else:
+    #     # 还不到最后样本余数
+    #     images_s = tf.split(images, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同）
+    #     labels_s = tf.split(labels, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 如果gpu运算能力不同，可以自己设定拆分策略
+    s_n = math.floor(len(images) / 2)
+    sn_lst = [s_n for i in range(len(num_gpus))]
+    images_s = tf.split(images, num_or_size_splits=sn_lst, axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
+    labels_s = tf.split(labels, num_or_size_splits=sn_lst, axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
     # 2 prepare train datasets and test datasets by using tensorflow dataset api
     # 2.1 train datasets
     # the image is substracted 127.5 and multiplied 1/128.
