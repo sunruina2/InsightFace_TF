@@ -1,9 +1,13 @@
+
+
+
 import argparse
 import os
 import tensorflow as tf
 from scipy import misc
 import numpy as np
 import io
+import cv2
 
 
 def to_rgb(img):
@@ -25,25 +29,31 @@ def augmentation(image, aug_img_size):
 
 
 class ClassificationImageData:
-
+    # https://www.jianshu.com/p/b480e5fcb638
     def __init__(self, img_size=112, augment_flag=True, augment_margin=16):
         self.img_size = img_size
         self.augment_flag = augment_flag
         self.augment_margin = augment_margin
+        self.label_c_num = 0
 
     def get_path_label(self, root):
         ids = list(os.listdir(root))
-        ids.sort()
-        self.cat_num = len(ids)
-        id_dict = dict(zip(ids, list(range(self.cat_num))))
+        if '.DS_Store' in ids:
+            ids.remove('.DS_Store')
+        if '.idea' in ids:
+            ids.remove('.idea')
+        ids.sort()  # 文件夹名字升序排序，对应peo_id_num序号0，1，2，...，label_n-1
+        self.label_c_num = len(ids)  # 子级目录个数，即label人数
+        id_dict = dict(zip(ids, list(range(self.label_c_num))))  # {每个人的文件夹名: peo_id_num}
         paths = []
         labels = []
-        for i in ids:
-            cur_dir = os.path.join(root, i)
-            fns = os.listdir(cur_dir)
-            paths += [os.path.join(cur_dir, fn) for fn in fns]
-            labels += [id_dict[i]] * len(fns)
-        return paths, labels
+        for i in ids:  # '00000'
+            cur_dir = os.path.join(root, i)  # '/Users/finup/Desktop/rg/rg_game/data/training/Asian_s/00000'
+            fns = os.listdir(
+                cur_dir)  # <class 'list'>: ['00004.jpg', '00002.jpg', '00003.jpg', '00001.jpg', '00000.jpg']
+            paths += [os.path.join(cur_dir, fn) for fn in fns]  # 每张照片对应的路径
+            labels += [id_dict[i]] * len(fns)  # 每张照片对应的peo_id_num,与paths的下标一一对应
+        return paths, labels  # 返回所有照片路径list“paths”；和每张照片对应的peo_id_num的list“labels”，len(paths)=len(labels)=293个样本，len(set(labels)) = 101人
 
     def image_processing(self, img):
         img.set_shape([None, None, 3])
@@ -59,7 +69,7 @@ class ClassificationImageData:
 
     def add_record(self, img, label, writer):
         img = to_rgb(img)
-        img = misc.imresize(img, [self.img_size, self.img_size]).astype(np.uint8)
+        img = cv2.resize(img, (self.img_size, self.img_size)).astype(np.uint8)
         shape = img.shape
         tf_features = tf.train.Features(feature={
             "img": tf.train.Feature(bytes_list=tf.train.BytesList(value=[img.tostring()])),
@@ -67,7 +77,7 @@ class ClassificationImageData:
             "label": tf.train.Feature(int64_list=tf.train.Int64List(value=[label]))
         })
         tf_example = tf.train.Example(features=tf_features)
-        tf_serialized = tf_example.SerializeToString()
+        tf_serialized = tf_example.SerializeToString()  # 将Example中的map压缩为二进制文件
         writer.write(tf_serialized)
 
     def write_tfrecord_from_folders(self, read_dir, write_path):
@@ -75,16 +85,17 @@ class ClassificationImageData:
         writer = tf.python_io.TFRecordWriter(write_path, options=None)
         paths, labels = self.get_path_label(read_dir)
         assert (len(paths) == len(labels))
-        total = len(paths)
-        cnt = 0
+        total = len(paths)  # 样本数
+        cnt = 0  # 写入计数
         for p, l in zip(paths, labels):
-            img = misc.imread(p).astype(np.uint8)
-            self.add_record(img, l, writer)
+            b, g, r = cv2.split(cv2.imread(p))
+            imgcv_rgb = cv2.merge([r, g, b])
+            self.add_record(imgcv_rgb, l, writer)
             cnt += 1
             print('%d/%d' % (cnt, total), end='\r')
         writer.close()
         print('done![%d/%d]' % (cnt, total))
-        print('class num: %d' % self.cat_num)
+        print('class num: %d' % self.label_c_num)
 
     def write_tfrecord_from_mxrec(self, read_dir, write_path):
         import mxnet as mx
@@ -110,9 +121,9 @@ class ClassificationImageData:
             cnt += 1
             print('%d/%d' % (cnt, total), end='\r')
         writer.close()
-        self.cat_num = len(set(labels))
+        self.label_c_num = len(set(labels))
         print('done![%d/%d]' % (cnt, total))
-        print('class num: %d' % self.cat_num)
+        print('class num: %d' % self.label_c_num)
 
     def parse_function(self, example_proto):
         dics = {
@@ -144,15 +155,37 @@ def get_args():
 if __name__ == "__main__":
     # args = get_args()
 
-    mode = 'mxrec'
+    mode = 'folders'
     image_size = 112
-    read_dir = ''
-    save_path = ''
+    place_lst = ['Asian', 'African', 'Indian', 'Caucasian']
 
-    cid = ClassificationImageData(img_size=image_size)
-    if mode == 'folders':
-        cid.write_tfrecord_from_folders(read_dir, save_path)
-    elif mode == 'mxrec':
-        cid.write_tfrecord_from_mxrec(read_dir, save_path)
-    else:
-        raise ('ERROR: wrong mode (only folders and mxrec are supported)')
+    # /Users/finup/Desktop/rg/train_data/Asian.tfrecord
+    # done![4947/4947]
+    # class num: 1728
+
+    # /Users/finup/Desktop/rg/train_data/African.tfrecord
+    # done![3863/3863]
+    # class num: 1543
+
+    # /Users/finup/Desktop/rg/train_data/Indian.tfrecord
+    # done![5182/5182]
+    # class num: 1923
+
+    # /Users/finup/Desktop/rg/train_data/Caucasian.tfrecord
+    # done![271354/271354]
+    # class num: 11326
+
+    for i in place_lst:
+
+        read_dir = '/Users/finup/Desktop/rg/rg_game/data/training/' + i
+        save_path = '/Users/finup/Desktop/rg/train_data/'+i+'.tfrecorda'
+        print(save_path)
+
+        cid = ClassificationImageData(img_size=image_size)
+        if mode == 'folders':
+            cid.write_tfrecord_from_folders(read_dir, save_path)
+        elif mode == 'mxrec':
+            cid.write_tfrecord_from_mxrec(read_dir, save_path)
+        else:
+            raise ('ERROR: wrong mode (only folders and mxrec are supported)')
+
