@@ -78,13 +78,13 @@ def average_gradients(tower_grads):
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # 1. define global parameters
     # args = get_parser()
     net_depth = 50  # resnet depth, default is 50
     epoch = 100000  # epoch to train the network
-    batch_size = 128  # batch size to train network
+    batch_size = 200  # batch size to train network
     lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
@@ -104,7 +104,7 @@ if __name__ == '__main__':
     show_info_interval = 10  # intervals to show information
     num_gpus = [0, 1]  # the num of gpus')  # MGPU
     tower_name = 'tower'  # tower name')  # MGPU
-    continue_train_flag = 1
+    continue_train_flag = 0
     # pretrain_ckpt_path = '../auroua_1022output2/mgpu_res/ckpt' + '/InsightFace_iter_' + '40000' + '.ckpt'
     # pretrain_ckpt_path = '../face_rg_files/premodels/pm_insight_auroua/ckpt_model_d' + '/InsightFace_iter_' + '710000' + '.ckpt'
     pretrain_ckpt_path = '../auroua_model_d' + '/InsightFace_iter_' + '710000' + '.ckpt'
