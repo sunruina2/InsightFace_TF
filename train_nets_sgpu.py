@@ -157,7 +157,7 @@ if __name__ == '__main__':
     p = int(512.0 / batch_size)
     lr_steps = [p * val for val in lr_steps]
     print('lr_steps:', lr_steps)
-    lr = tf.train.piecewise_constant(global_step, boundaries=lr_steps, values=[0.001, 0.0005, 0.0003, 0.0001],
+    lr = tf.train.piecewise_constant(global_step, boundaries=lr_steps, values=lr_values,
                                      name='lr_schedule')
     # 3.7 define the optimize method
     opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=momentum)
