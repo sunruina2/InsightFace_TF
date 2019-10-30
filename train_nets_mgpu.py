@@ -88,21 +88,29 @@ if __name__ == '__main__':
     # args = get_parser()
     batch_size = 220  # batch size to train network
     buffer_size = 100000  # tf dataset api buffer size  # MGPU 变大*10
+    lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
+    lr_values = [0.005, 0.001, 0.0005, 0.0003, 0.0001]  # learning rate to train network
     num_output = 85742  # the image size
     tfrecords_file_path = '../train_data/ms1v2.tfrecords'  # path to the output of tfrecords file path
     # num_output = 1728  # the image size
     # tfrecords_file_path = '../train_data/Asian.tfrecords'  # path to the output of tfrecords file path
     continue_train_flag, start_count = 1, 25000
-    pretrain_ckpt_path = '../insight_out/auroua25000_1030output/mgpu_res/ckpt/InsightFace_iter_' + str(
-        start_count) + '.ckpt'
-
+    pretrain_ckpt_path = '../insight_out/auroua25000_1030output/mgpu_res/ckpt/InsightFace_iter_' + str(start_count) + '.ckpt'
     out_dt = '1030'
     summary_path = '../insight_out/' + out_dt + '_auroua_out/mgpu_res/summary'  # the summary file save path
     ckpt_path = '../insight_out/' + out_dt + '_auroua_out/mgpu_res/ckpt'  # the ckpt file save path
 
+    # 打印关键参数到nohup out中
+    key_para = {'batch_size': batch_size, 'buffer_size': buffer_size, 'lr_steps': lr_steps, 'lr_values': lr_values,
+                'num_output': num_output, 'tfrecords_file_path': tfrecords_file_path,
+                'continue_train_flag': continue_train_flag, 'start_count': start_count,
+                'pretrain_ckpt_path': pretrain_ckpt_path, 'out_dt': out_dt, 'summary_path': summary_path,
+                'ckpt_path': ckpt_path}
+    for k, v in key_para.items():
+        print(k, '        ', v)
+
     net_depth = 50  # resnet depth, default is 50
     epoch = 100000  # epoch to train the network
-    lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
     eval_datasets = ['lfw', 'cplfw', 'agedb_30']  # evluation datasets
@@ -159,7 +167,7 @@ if __name__ == '__main__':
     p = int(512.0 / batch_size)
     lr_steps = [p * val for val in lr_steps]
     print('learning rate steps: ', lr_steps)
-    lr = tf.train.piecewise_constant(global_step, boundaries=lr_steps, values=[0.005, 0.001, 0.0005, 0.0003, 0.0001],
+    lr = tf.train.piecewise_constant(global_step, boundaries=lr_steps, values=lr_values,
                                      name='lr_schedule')
     # 3.3 define the optimize method
     opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=momentum)
