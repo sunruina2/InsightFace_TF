@@ -71,14 +71,12 @@ class ClassificationImageData:
         img = to_rgb(img)
         img = cv2.resize(img, (self.img_size, self.img_size)).astype(np.uint8)
         shape = img.shape
-        tf_features = tf.train.Features(feature={
+        tf_example = tf.train.Example(features=tf.train.Features(feature={
             "img": tf.train.Feature(bytes_list=tf.train.BytesList(value=[img.tostring()])),
             "shape": tf.train.Feature(int64_list=tf.train.Int64List(value=list(shape))),
             "label": tf.train.Feature(int64_list=tf.train.Int64List(value=[label]))
-        })
-        tf_example = tf.train.Example(features=tf_features)
-        tf_serialized = tf_example.SerializeToString()  # 将Example中的map压缩为二进制文件
-        writer.write(tf_serialized)
+        }))
+        writer.write(tf_example.SerializeToString())  # 将Example中的map压缩为二进制文件
 
     def write_tfrecord_from_folders(self, read_dir, write_path):
         print('write tfrecord from folders...')
@@ -162,15 +160,15 @@ if __name__ == "__main__":
     # /Users/finup/Desktop/rg/train_data/Asian.tfrecord
     # done![4947/4947]
     # class num: 1728
-
+    #
     # /Users/finup/Desktop/rg/train_data/African.tfrecord
     # done![3863/3863]
     # class num: 1543
-
+    #
     # /Users/finup/Desktop/rg/train_data/Indian.tfrecord
     # done![5182/5182]
     # class num: 1923
-
+    #
     # /Users/finup/Desktop/rg/train_data/Caucasian.tfrecord
     # done![271354/271354]
     # class num: 11326

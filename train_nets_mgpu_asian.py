@@ -1,13 +1,14 @@
 import tensorflow as tf
 import tensorlayer as tl
 import argparse
-from data.mx2tfrecords import parse_function
+from data.mx2tfrecords import raw_parse_function, folder_parse_function
 import os
 from nets.L_Resnet_E_IR_MGPU import get_resnet
 from losses.face_losses import arcface_loss
 import time
 from data.eval_data_reader import load_bin
 from verification import ver_test
+
 
 def get_parser():
     parser = argparse.ArgumentParser(description='parameters to train net')
@@ -28,7 +29,8 @@ def get_parser():
     parser.add_argument('--ckpt_path', default='./output/ckpt', help='the ckpt file save path')
     parser.add_argument('--saver_maxkeep', default=100, help='tf.train.Saver max keep ckpt files')
     parser.add_argument('--buffer_size', default=100000, help='tf dataset api buffer size')  # MGPU 变大*10
-    parser.add_argument('--log_device_mapping', default=False, help='show device placement log')  # MGPU 删掉了log_file_path参数
+    parser.add_argument('--log_device_mapping', default=False,
+                        help='show device placement log')  # MGPU 删掉了log_file_path参数
     parser.add_argument('--summary_interval', default=300, help='interval to save summary')
     parser.add_argument('--ckpt_interval', default=5000, help='intervals to save ckpt file')  # MGPU 变小/2
     parser.add_argument('--validate_interval', default=2000, help='intervals to save ckpt file')
@@ -38,43 +40,44 @@ def get_parser():
     args = parser.parse_args()
     return args
 
+
 #  MGPU
 def average_gradients(tower_grads):
-  """Calculate the average gradient for each shared variable across all towers.
+    """Calculate the average gradient for each shared variable across all towers.
 
-  Note that this function provides a synchronization point across all towers.
+    Note that this function provides a synchronization point across all towers.
 
-  Args:
-    tower_grads: List of lists of (gradient, variable) tuples. The outer list
-      is over individual gradients. The inner list is over the gradient
-      calculation for each tower.
-  Returns:
-     List of pairs of (gradient, variable) where the gradient has been averaged
-     across all towers.
-  """
-  average_grads = []
-  for grad_and_vars in zip(*tower_grads):
-    # Note that each grad_and_vars looks like the following:
-    #   ((grad0_gpu0, var0_gpu0), ... , (grad0_gpuN, var0_gpuN))
-    grads = []
-    for g, _ in grad_and_vars:
-      # Add 0 dimension to the gradients to represent the tower.
-      expanded_g = tf.expand_dims(g, 0)
+    Args:
+      tower_grads: List of lists of (gradient, variable) tuples. The outer list
+        is over individual gradients. The inner list is over the gradient
+        calculation for each tower.
+    Returns:
+       List of pairs of (gradient, variable) where the gradient has been averaged
+       across all towers.
+    """
+    average_grads = []
+    for grad_and_vars in zip(*tower_grads):
+        # Note that each grad_and_vars looks like the following:
+        #   ((grad0_gpu0, var0_gpu0), ... , (grad0_gpuN, var0_gpuN))
+        grads = []
+        for g, _ in grad_and_vars:
+            # Add 0 dimension to the gradients to represent the tower.
+            expanded_g = tf.expand_dims(g, 0)
 
-      # Append on a 'tower' dimension which we will average over below.
-      grads.append(expanded_g)
+            # Append on a 'tower' dimension which we will average over below.
+            grads.append(expanded_g)
 
-    # Average over the 'tower' dimension.
-    grad = tf.concat(axis=0, values=grads)
-    grad = tf.reduce_mean(grad, 0)
+        # Average over the 'tower' dimension.
+        grad = tf.concat(axis=0, values=grads)
+        grad = tf.reduce_mean(grad, 0)
 
-    # Keep in mind that the Variables are redundant because they are shared
-    # across towers. So .. we will just return the first tower's pointer to
-    # the Variable.
-    v = grad_and_vars[0][1]
-    grad_and_var = (grad, v)
-    average_grads.append(grad_and_var)
-  return average_grads
+        # Keep in mind that the Variables are redundant because they are shared
+        # across towers. So .. we will just return the first tower's pointer to
+        # the Variable.
+        v = grad_and_vars[0][1]
+        grad_and_var = (grad, v)
+        average_grads.append(grad_and_var)
+    return average_grads
 
 
 if __name__ == '__main__':
@@ -143,14 +146,21 @@ if __name__ == '__main__':
     print('splitsplitsplitsplit', s_n)
 
     sn_lst = [s_n for i in range(len(num_gpus))]
-    images_s = tf.split(images, num_or_size_splits=sn_lst, axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
-    labels_s = tf.split(labels, num_or_size_splits=sn_lst, axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
+    images_s = tf.split(images, num_or_size_splits=sn_lst,
+                        axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
+    labels_s = tf.split(labels, num_or_size_splits=sn_lst,
+                        axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
     # 2 prepare train datasets and test datasets by using tensorflow dataset api
     # 2.1 train datasets
     # the image is substracted 127.5 and multiplied 1/128.
     # random flip left right
     dataset = tf.data.TFRecordDataset(tfrecords_file_path)
-    dataset = dataset.map(parse_function)
+
+    if tfrecords_file_path.split('/')[-1] in ['ms1.tfrecords', 'ms1v2.tfrecords']:
+        dataset = dataset.map(raw_parse_function)
+
+    else:
+        dataset = dataset.map(folder_parse_function)
     dataset = dataset.shuffle(buffer_size=buffer_size)
     dataset = dataset.batch(batch_size)
     iterator = dataset.make_initializable_iterator()
@@ -167,8 +177,8 @@ if __name__ == '__main__':
     # 3.1 inference phase
     w_init_method = tf.contrib.layers.xavier_initializer(uniform=False)
     # 3.2 define the learning rate schedule
-    p = int(512.0/batch_size)
-    lr_steps = [p*val for val in lr_steps]
+    p = int(512.0 / batch_size)
+    lr_steps = [p * val for val in lr_steps]
     print('learning rate steps: ', lr_steps)
     lr = tf.train.piecewise_constant(global_step, boundaries=lr_steps, values=[0.005, 0.001, 0.0005, 0.0003, 0.0001],
                                      name='lr_schedule')
@@ -259,7 +269,7 @@ if __name__ == '__main__':
     sess.run(tf.global_variables_initializer())
     if continue_train_flag == 1:
         restore_saver = tf.train.Saver()  # 继续训练的话，将这两行打开
-        restore_saver.restore(sess,  pretrain_ckpt_path)
+        restore_saver.restore(sess, pretrain_ckpt_path)
 
     # begin iteration
     count = 0
@@ -277,9 +287,9 @@ if __name__ == '__main__':
                                                                          loss_dict[loss_keys[3]],
                                                                          loss_dict[loss_keys[4]],
                                                                          loss_dict[loss_keys[5]], acc],
-                                                                         feed_dict=feed_dict)  # MGPU Loss不同
+                                                                        feed_dict=feed_dict)  # MGPU Loss不同
                 end = time.time()
-                pre_sec = batch_size/(end - start)
+                pre_sec = batch_size / (end - start)
                 # print training information
                 if count > 0 and count % show_info_interval == 0:
                     # print('epoch %d, total_step %d, total loss gpu 1 is %.2f , inference loss gpu 1 is %.2f, weight deacy '
@@ -288,9 +298,11 @@ if __name__ == '__main__':
                     #       (i, count, total_loss_gpu_1, inference_loss_val_gpu_1, wd_loss_val_gpu_1, total_loss_gpu_2,
                     #        inference_loss_val_gpu_2, wd_loss_val_gpu_2, acc_val, pre_sec))
 
-                    print(time.strftime("%Y%m%d%H%M%S", time.localtime()), ' epoch %d, total_step %d, total loss: [%.2f, %.2f], inference loss: [%.2f, %.2f], weight deacy '
+                    print(time.strftime("%Y%m%d%H%M%S", time.localtime()),
+                          ' epoch %d, total_step %d, total loss: [%.2f, %.2f], inference loss: [%.2f, %.2f], weight deacy '
                           'loss: [%.2f, %.2f], training accuracy is %.6f, time %.3f samples/sec' %
-                          (i, count, total_loss_gpu_1, total_loss_gpu_2, inference_loss_val_gpu_1, inference_loss_val_gpu_2,
+                          (i, count, total_loss_gpu_1, total_loss_gpu_2, inference_loss_val_gpu_1,
+                           inference_loss_val_gpu_2,
                            wd_loss_val_gpu_1, wd_loss_val_gpu_2, acc_val, pre_sec))
                 count += 1
 
@@ -307,10 +319,11 @@ if __name__ == '__main__':
                     saver.save(sess, filename)
                 # # validate
                 if count >= 0 and count % validate_interval == 0:
-                    feed_dict_test ={dropout_rate: 1.0}
+                    feed_dict_test = {dropout_rate: 1.0}
                     results = ver_test(ver_list=ver_list, ver_name_list=ver_name_list, nbatch=count, sess=sess,
-                             embedding_tensor=embedding_tensor, batch_size=batch_size//len(num_gpus), feed_dict=feed_dict_test,
-                             input_placeholder=images_test)  # MGPU 增加////len(num_gpus)
+                                       embedding_tensor=embedding_tensor, batch_size=batch_size // len(num_gpus),
+                                       feed_dict=feed_dict_test,
+                                       input_placeholder=images_test)  # MGPU 增加////len(num_gpus)
                     if max(results) > 0.998:
                         print('best accuracy is %.5f' % max(results))
                         filename = 'InsightFace_iter_best_{:d}'.format(count) + '.ckpt'
@@ -319,4 +332,3 @@ if __name__ == '__main__':
             except tf.errors.OutOfRangeError:
                 print("End of epoch %d" % i)
                 break
-

@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorlayer as tl
 import argparse
-from data.mx2tfrecords import parse_function
+from data.mx2tfrecords import raw_parse_function, folder_parse_function
 import os
 # from nets.L_Resnet_E_IR import get_resnet
 # from nets.L_Resnet_E_IR_GBN import get_resnet
@@ -82,8 +82,12 @@ if __name__ == '__main__':
     # 2.1 train datasets
     # the image is substracted 127.5 and multiplied 1/128.
     # random flip left right
-    dataset = tf.data.TFRecordDataset(tfrecords_file_path)  # <TFRecordDatasetV1 shapes: (), types: tf.string>
-    dataset = dataset.map(parse_function)  # map，parse_function函数对每一个图进行处理，bgr位置转换，标准化，随机数据增强
+    dataset = tf.data.TFRecordDataset(tfrecords_file_path) # <TFRecordDatasetV1 shapes: (), types: tf.string>
+    if tfrecords_file_path.split('/')[-1] in ['ms1.tfrecords', 'ms1v2.tfrecords']:
+        dataset = dataset.map(raw_parse_function)   # map，parse_function函数对每一个图进行处理，bgr位置转换，标准化，随机数据增强
+
+    else:
+        dataset = dataset.map(folder_parse_function)
     dataset = dataset.shuffle(buffer_size=buffer_size)  # shuffle
     dataset = dataset.batch(batch_size)  # ((?, 112, 112, 3)， (?,))
     iterator = dataset.make_initializable_iterator()  # ((?, 112, 112, 3)， (?,))

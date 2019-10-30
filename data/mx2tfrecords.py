@@ -9,6 +9,16 @@ import os
 import time
 
 
+def to_rgb(img):
+    if img.ndim < 3:
+        h, w = img.shape
+        ret = np.empty((h, w, 3), dtype=np.uint8)
+        ret[:, :, 0] = ret[:, :, 1] = ret[:, :, 2] = img
+        return ret
+    else:
+        return img
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -62,7 +72,7 @@ def mx2tfrecords(imgidx, imgrec, output_path):
     writer.close()
 
 
-def parse_function(example_proto):
+def raw_parse_function(example_proto):
     features = {'image_raw': tf.FixedLenFeature([], tf.string),
                 'label': tf.FixedLenFeature([],
                                             tf.int64)}  # <class 'dict'>: {'image_raw': FixedLenFeature(shape=[], dtype=tf.string, default_value=None), 'label': FixedLenFeature(shape=[], dtype=tf.int64, default_value=None)}
@@ -73,6 +83,23 @@ def parse_function(example_proto):
     img = tf.reshape(img, shape=(112, 112, 3))  # (112, 112, 3)
     r, g, b = tf.split(img, num_or_size_splits=3, axis=-1)  # (112, 112, 1)，(112, 112, 1)，(112, 112, 1)
     img = tf.concat([b, g, r], axis=-1)  # (112, 112, 3)
+    img = tf.cast(img, dtype=tf.float32)  # (112, 112, 3)
+    img = tf.subtract(img, 127.5)  # (112, 112, 3)
+    img = tf.multiply(img, 0.0078125)  # (112, 112, 3)
+    img = tf.image.random_flip_left_right(img)  # (112, 112, 3)
+    label = tf.cast(features['label'], tf.int64)
+    return img, label
+
+
+def folder_parse_function(example_proto):
+    features = {'img': tf.FixedLenFeature(shape=(), dtype=tf.string),
+                'shape': tf.FixedLenFeature(shape=(3,), dtype=tf.int64),
+                'label': tf.FixedLenFeature(shape=(), dtype=tf.int64)}
+    features = tf.parse_single_example(example_proto, features)  # <class 'dict'>: {'image_raw': <tf.Tensor 'ParseSingleExample/ParseSingleExample:0' shape=() dtype=string>, 'label': <tf.Tensor 'ParseSingleExample/ParseSingleExample:1' shape=() dtype=int64>}
+    # You can do more image distortion here for training data
+    img = tf.image.decode_jpeg(features['img'])
+    img = tf.reshape(img, shape=features['shape'])  # (112, 112, 3)
+
     img = tf.cast(img, dtype=tf.float32)  # (112, 112, 3)
     img = tf.subtract(img, 127.5)  # (112, 112, 3)
     img = tf.multiply(img, 0.0078125)  # (112, 112, 3)

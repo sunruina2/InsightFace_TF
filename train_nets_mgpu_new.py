@@ -145,7 +145,7 @@ if __name__ == '__main__':
     # 2.1 train datasets
     # the image is substracted 127.5 and multiplied 1/128.
     # random flip left right
-    tfrecords_f = os.path.join(tfrecords_file_path, 'ms1.tfrecords')
+    tfrecords_f = os.path.join(tfrecords_file_path, 'ms1v2.tfrecords')
     dataset = tf.data.TFRecordDataset(tfrecords_f)
     dataset = dataset.map(parse_function)
     dataset = dataset.shuffle(buffer_size=buffer_size)
