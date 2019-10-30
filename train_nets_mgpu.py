@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorlayer as tl
 import argparse
-from data.mx2tfrecords import parse_function
+from data.mx2tfrecords import raw_parse_function, folder_parse_function
 import os
 from nets.L_Resnet_E_IR_MGPU import get_resnet
 from losses.face_losses import arcface_loss
@@ -79,33 +79,37 @@ def average_gradients(tower_grads):
 
 
 if __name__ == '__main__':
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "1, 3"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
     # 1. define global parameters
     # args = get_parser()
+    batch_size = 220  # batch size to train network
+    buffer_size = 100000  # tf dataset api buffer size  # MGPU 变大*10
+    num_output = 85742  # the image size
+    tfrecords_file_path = '../train_data/ms1v2.tfrecords'  # path to the output of tfrecords file path
+    # num_output = 1728  # the image size
+    # tfrecords_file_path = '../train_data/Asian.tfrecords'  # path to the output of tfrecords file path
+    continue_train_flag = 1
+    pretrain_ckpt_path = '../auroua_1025output/mgpu_res/ckpt/InsightFace_iter_25000.ckpt'
+    summary_path = '../auroua_1030output/mgpu_res/summary'  # the summary file save path
+    ckpt_path = '../auroua_1030output/mgpu_res/ckpt'  # the ckpt file save path
+
     net_depth = 50  # resnet depth, default is 50
     epoch = 100000  # epoch to train the network
-    batch_size = 128  # batch size to train network
-    lr_steps = [40000, 60000, 80000]  # learning rate to train network
+    lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
-    eval_datasets = ['lfw', 'cfp_fp']  # evluation datasets
+    eval_datasets = ['lfw', 'cplfw', 'agedb_30']  # evluation datasets
     eval_db_path = '../ver_data'  # evluate datasets base path
     image_size = [112, 112]  # the image size
-    num_output = 85164  # the image size
-    tfrecords_file_path = '../train_data'  # path to the output of tfrecords file path
-    summary_path = '../auroua_output/para_50_80/summary'  # the summary file save path
-    ckpt_path = '../auroua_output/para_50_80/ckpt'  # the ckpt file save path
     saver_maxkeep = 100  # tf.train.Saver max keep ckpt files
-    buffer_size = 100000  # tf dataset api buffer size  # MGPU 变大*10
     log_device_mapping = False  # show device placement log  # MGPU 删掉了log_file_path参数
-    summary_interval = 300  # interval to save summary
+    summary_interval = 500  # interval to save summary
     ckpt_interval = 5000  # intervals to save ckpt file  # MGPU 变小/2
-    validate_interval = 2000  # intervals to save ckpt file
-    show_info_interval = 20  # intervals to show information
-    # num_gpus = [0, 1]  # the num of gpus')  # MGPU
-    num_gpus = [0]  # the num of gpus')  # MGPU
+    validate_interval = 5000  # intervals to save ckpt file
+    show_info_interval = 10  # intervals to show information
+    num_gpus = [0, 1]  # the num of gpus')  # MGPU
     tower_name = 'tower'  # tower name')  # MGPU
 
     global_step = tf.Variable(name='global_step', initial_value=0, trainable=False)
@@ -114,16 +118,21 @@ if __name__ == '__main__':
     images_test = tf.placeholder(name='img_inputs', shape=[None, *image_size, 3], dtype=tf.float32)  # MGPU
     labels = tf.placeholder(name='img_labels', shape=[None, ], dtype=tf.int64)
     dropout_rate = tf.placeholder(name='dropout_rate', dtype=tf.float32)
-    # splits input to different gpu    # MGPU
-    images_s = tf.split(images, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
-    labels_s = tf.split(labels, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
+
+    s_n = tf.to_int64(tf.floor(tf.div(tf.to_float(tf.shape(images)[0]), len(num_gpus))))
+    sn_lst = [s_n for i in range(len(num_gpus))]
+    sn_lst[-1] = s_n + (tf.to_int64(tf.shape(images)[0]) - tf.to_int64(tf.reduce_sum(sn_lst)))
+    images_s = tf.split(images, num_or_size_splits=sn_lst, axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
+    labels_s = tf.split(labels, num_or_size_splits=sn_lst, axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
     # 2 prepare train datasets and test datasets by using tensorflow dataset api
     # 2.1 train datasets
     # the image is substracted 127.5 and multiplied 1/128.
     # random flip left right
-    tfrecords_f = os.path.join(tfrecords_file_path, 'ms1.tfrecords')
-    dataset = tf.data.TFRecordDataset(tfrecords_f)
-    dataset = dataset.map(parse_function)
+    dataset = tf.data.TFRecordDataset(tfrecords_file_path)
+    if tfrecords_file_path.split('/')[-1] in ['ms1.tfrecords', 'ms1v2.tfrecords']:
+        dataset = dataset.map(raw_parse_function)   # map，parse_function函数对每一个图进行处理，bgr位置转换，标准化，随机数据增强
+    else:
+        dataset = dataset.map(folder_parse_function)
     dataset = dataset.shuffle(buffer_size=buffer_size)
     dataset = dataset.batch(batch_size)
     iterator = dataset.make_initializable_iterator()
@@ -143,7 +152,7 @@ if __name__ == '__main__':
     p = int(512.0/batch_size)
     lr_steps = [p*val for val in lr_steps]
     print('learning rate steps: ', lr_steps)
-    lr = tf.train.piecewise_constant(global_step, boundaries=lr_steps, values=[0.001, 0.0005, 0.0003, 0.0001],
+    lr = tf.train.piecewise_constant(global_step, boundaries=lr_steps, values=[0.005, 0.001, 0.0005, 0.0003, 0.0001],
                                      name='lr_schedule')
     # 3.3 define the optimize method
     opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=momentum)
@@ -230,6 +239,13 @@ if __name__ == '__main__':
     saver = tf.train.Saver(tf.global_variables())  # MGPU 没加 max_to_keep=args.saver_maxkeep ，加了tf.global_variables()
     # init all variables
     sess.run(tf.global_variables_initializer())
+
+    if continue_train_flag == 1:
+        variables_to_restore = tf.contrib.framework.get_variables_to_restore(
+            exclude=['arcface_loss'])  # 不加载包含arcface_loss的所有变量
+        print('restore premodel ...')
+        restore_saver = tf.train.Saver(variables_to_restore)  # 继续训练的话，将这两行打开
+        restore_saver.restore(sess, pretrain_ckpt_path)
     # begin iteration
     count = 0
     for i in range(epoch):
