@@ -87,11 +87,12 @@ if __name__ == '__main__':
     # args = get_parser()
     net_depth = 50  # resnet depth, default is 50
     epoch = 100000  # epoch to train the network
-    batch_size = 50  # batch size to train network
+    batch_size = 100  # batch size to train network
     lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
-    eval_datasets = ['lfw', 'cplfw', 'agedb_30']  # evluation datasets
+    eval_datasets = ['lfw']  # evluation datasets
+    # eval_datasets = ['lfw', 'cplfw', 'agedb_30']  # evluation datasets
     eval_db_path = '../ver_data'  # evluate datasets base path
     image_size = [112, 112]  # the image size
     num_output = 1728  # the image size
@@ -99,7 +100,7 @@ if __name__ == '__main__':
     summary_path = '../auroua_asian_1029output/mgpu_res/summary'  # the summary file save path
     ckpt_path = '../auroua_asian_1029output/mgpu_res/ckpt'  # the ckpt file save path
     saver_maxkeep = 100  # tf.train.Saver max keep ckpt files
-    buffer_size = 3000  # tf dataset api buffer size  # MGPU 变大*10
+    buffer_size = 2000  # tf dataset api buffer size  # MGPU 变大*10
     log_device_mapping = False  # show device placement log  # MGPU 删掉了log_file_path参数
     summary_interval = 500  # interval to save summary
     ckpt_interval = 5000  # intervals to save ckpt file  # MGPU 变小/2
@@ -109,8 +110,8 @@ if __name__ == '__main__':
     tower_name = 'tower'  # tower name')  # MGPU
     continue_train_flag = 0
     # pretrain_ckpt_path = '../auroua_1022output2/mgpu_res/ckpt' + '/InsightFace_iter_' + '40000' + '.ckpt'
-    # pretrain_ckpt_path = '../face_rg_files/premodels/pm_insight_auroua/ckpt_model_d' + '/InsightFace_iter_' + '710000' + '.ckpt'
-    pretrain_ckpt_path = '../auroua_model_d' + '/InsightFace_iter_' + '710000' + '.ckpt'
+    # pretrain_ckpt_path = '../face_rg_files/premodels/pm_insight_auroua/ckpt_model_d/InsightFace_iter_710000.ckpt'
+    pretrain_ckpt_path = '../Insight_output/ms1v2mgpu_1030out/InsightFace_iter_10000.ckpt'
     # /data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/auroua_model_d
     global_step = tf.Variable(name='global_step', initial_value=0, trainable=False)
     inc_op = tf.assign_add(global_step, 1, name='increment_global_step')
@@ -118,6 +119,12 @@ if __name__ == '__main__':
     images_test = tf.placeholder(name='img_inputs', shape=[None, *image_size, 3], dtype=tf.float32)  # MGPU
     labels = tf.placeholder(name='img_labels', shape=[None, ], dtype=tf.int64)
     dropout_rate = tf.placeholder(name='dropout_rate', dtype=tf.float32)
+
+    # method 1
+    # images_s = tf.split(images, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同）
+    # labels_s = tf.split(labels, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 如果gpu运算能力不同，可以自己设定拆分策略
+
+    # method 2
     # splits input to different gpu    # MGPU
     # images_s = [i for i in range(len(num_gpus))]
     # labels_s = [i for i in range(len(num_gpus))]
@@ -139,8 +146,9 @@ if __name__ == '__main__':
     #     # 还不到最后样本余数
     #     images_s = tf.split(images, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同）
     #     labels_s = tf.split(labels, num_or_size_splits=len(num_gpus), axis=0)  # MGPU 如果gpu运算能力不同，可以自己设定拆分策略
-    print('splitsplitsplitsplit', tf.shape(images)[0])
 
+    # method3
+    print('splitsplitsplitsplit', tf.shape(images)[0])
     s_n = tf.div(tf.to_float(tf.shape(images)[0]), len(num_gpus))
     s_n = tf.to_int64(tf.floor(s_n))
     print('splitsplitsplitsplit', s_n)
@@ -267,8 +275,11 @@ if __name__ == '__main__':
     saver = tf.train.Saver(tf.global_variables())  # MGPU 没加 max_to_keep=args.saver_maxkeep ，加了tf.global_variables()
     # init all variables
     sess.run(tf.global_variables_initializer())
+    variables_to_restore = tf.contrib.framework.get_variables_to_restore(
+        exclude=['arcface_loss'])  # 不加载包含arcface_loss的所有变量
     if continue_train_flag == 1:
-        restore_saver = tf.train.Saver()  # 继续训练的话，将这两行打开
+        print('restore premodel ...')
+        restore_saver = tf.train.Saver(variables_to_restore)  # 继续训练的话，将这两行打开
         restore_saver.restore(sess, pretrain_ckpt_path)
 
     # begin iteration
@@ -280,55 +291,58 @@ if __name__ == '__main__':
                 images_train, labels_train = sess.run(next_element)
                 feed_dict = {images: images_train, labels: labels_train, dropout_rate: 0.4}
                 start = time.time()
-                _, _, inference_loss_val_gpu_1, wd_loss_val_gpu_1, total_loss_gpu_1, inference_loss_val_gpu_2, \
-                wd_loss_val_gpu_2, total_loss_gpu_2, acc_val = sess.run([train_op, inc_op, loss_dict[loss_keys[0]],
-                                                                         loss_dict[loss_keys[1]],
-                                                                         loss_dict[loss_keys[2]],
-                                                                         loss_dict[loss_keys[3]],
-                                                                         loss_dict[loss_keys[4]],
-                                                                         loss_dict[loss_keys[5]], acc],
-                                                                        feed_dict=feed_dict)  # MGPU Loss不同
+                # _, _, inference_loss_val_gpu_1, wd_loss_val_gpu_1, total_loss_gpu_1, inference_loss_val_gpu_2, \
+                # wd_loss_val_gpu_2, total_loss_gpu_2, acc_val = sess.run([train_op, inc_op, loss_dict[loss_keys[0]],
+                #                                                          loss_dict[loss_keys[1]],
+                #                                                          loss_dict[loss_keys[2]],
+                #                                                          loss_dict[loss_keys[3]],
+                #                                                          loss_dict[loss_keys[4]],
+                #                                                          loss_dict[loss_keys[5]], acc],
+                #                                                         feed_dict=feed_dict)  # MGPU Loss不同
+                images_i, images_s_i, labels_i, labels_s_i = sess.run(
+                    [images, images_s, labels, labels_s], feed_dict=feed_dict)  # MGPU Loss不同
+                print(images_i.shape, images_s_i[0].shape, labels_i.shape, labels_s_i[0].shape)
                 end = time.time()
-                pre_sec = batch_size / (end - start)
-                # print training information
-                if count > 0 and count % show_info_interval == 0:
-                    # print('epoch %d, total_step %d, total loss gpu 1 is %.2f , inference loss gpu 1 is %.2f, weight deacy '
-                    #       'loss gpu 1 is %.2f, total loss gpu 2 is %.2f , inference loss gpu 2 is %.2f, weight deacy '
-                    #       'loss gpu 2 is %.2f, training accuracy is %.6f, time %.3f samples/sec' %
-                    #       (i, count, total_loss_gpu_1, inference_loss_val_gpu_1, wd_loss_val_gpu_1, total_loss_gpu_2,
-                    #        inference_loss_val_gpu_2, wd_loss_val_gpu_2, acc_val, pre_sec))
-
-                    print(time.strftime("%Y%m%d%H%M%S", time.localtime()),
-                          ' epoch %d, total_step %d, total loss: [%.2f, %.2f], inference loss: [%.2f, %.2f], weight deacy '
-                          'loss: [%.2f, %.2f], training accuracy is %.6f, time %.3f samples/sec' %
-                          (i, count, total_loss_gpu_1, total_loss_gpu_2, inference_loss_val_gpu_1,
-                           inference_loss_val_gpu_2,
-                           wd_loss_val_gpu_1, wd_loss_val_gpu_2, acc_val, pre_sec))
-                count += 1
-
-                # save summary
-                if count > 0 and count % summary_interval == 0:
-                    feed_dict = {images: images_train, labels: labels_train, dropout_rate: 0.4}
-                    summary_op_val = sess.run(summary_op, feed_dict=feed_dict)
-                    summary.add_summary(summary_op_val, count)
-
-                # save ckpt files
-                if count > 0 and count % ckpt_interval == 0:
-                    filename = 'InsightFace_iter_{:d}'.format(count) + '.ckpt'
-                    filename = os.path.join(ckpt_path, filename)
-                    saver.save(sess, filename)
-                # # validate
-                if count >= 0 and count % validate_interval == 0:
-                    feed_dict_test = {dropout_rate: 1.0}
-                    results = ver_test(ver_list=ver_list, ver_name_list=ver_name_list, nbatch=count, sess=sess,
-                                       embedding_tensor=embedding_tensor, batch_size=batch_size // len(num_gpus),
-                                       feed_dict=feed_dict_test,
-                                       input_placeholder=images_test)  # MGPU 增加////len(num_gpus)
-                    if max(results) > 0.998:
-                        print('best accuracy is %.5f' % max(results))
-                        filename = 'InsightFace_iter_best_{:d}'.format(count) + '.ckpt'
-                        filename = os.path.join(ckpt_path, filename)
-                        saver.save(sess, filename)
+            #     pre_sec = batch_size / (end - start)
+            #     # print training information
+            #     if count > 0 and count % show_info_interval == 0:
+            #         # print('epoch %d, total_step %d, total loss gpu 1 is %.2f , inference loss gpu 1 is %.2f, weight deacy '
+            #         #       'loss gpu 1 is %.2f, total loss gpu 2 is %.2f , inference loss gpu 2 is %.2f, weight deacy '
+            #         #       'loss gpu 2 is %.2f, training accuracy is %.6f, time %.3f samples/sec' %
+            #         #       (i, count, total_loss_gpu_1, inference_loss_val_gpu_1, wd_loss_val_gpu_1, total_loss_gpu_2,
+            #         #        inference_loss_val_gpu_2, wd_loss_val_gpu_2, acc_val, pre_sec))
+            #
+            #         print(time.strftime("%Y%m%d%H%M%S", time.localtime()),
+            #               ' epoch %d, total_step %d, total loss: [%.2f, %.2f], inference loss: [%.2f, %.2f], weight deacy '
+            #               'loss: [%.2f, %.2f], training accuracy is %.6f, time %.3f samples/sec' %
+            #               (i, count, total_loss_gpu_1, total_loss_gpu_2, inference_loss_val_gpu_1,
+            #                inference_loss_val_gpu_2,
+            #                wd_loss_val_gpu_1, wd_loss_val_gpu_2, acc_val, pre_sec))
+            #     count += 1
+            #
+            #     # save summary
+            #     if count > 0 and count % summary_interval == 0:
+            #         feed_dict = {images: images_train, labels: labels_train, dropout_rate: 0.4}
+            #         summary_op_val = sess.run(summary_op, feed_dict=feed_dict)
+            #         summary.add_summary(summary_op_val, count)
+            #
+            #     # save ckpt files
+            #     if count > 0 and count % ckpt_interval == 0:
+            #         filename = 'InsightFace_iter_{:d}'.format(count) + '.ckpt'
+            #         filename = os.path.join(ckpt_path, filename)
+            #         saver.save(sess, filename)
+            #     # # validate
+            #     if count >= 0 and count % validate_interval == 0:
+            #         feed_dict_test = {dropout_rate: 1.0}
+            #         results = ver_test(ver_list=ver_list, ver_name_list=ver_name_list, nbatch=count, sess=sess,
+            #                            embedding_tensor=embedding_tensor, batch_size=batch_size // len(num_gpus),
+            #                            feed_dict=feed_dict_test,
+            #                            input_placeholder=images_test)  # MGPU 增加////len(num_gpus)
+            #         if max(results) > 0.998:
+            #             print('best accuracy is %.5f' % max(results))
+            #             filename = 'InsightFace_iter_best_{:d}'.format(count) + '.ckpt'
+            #             filename = os.path.join(ckpt_path, filename)
+            #             saver.save(sess, filename)
             except tf.errors.OutOfRangeError:
                 print("End of epoch %d" % i)
                 break

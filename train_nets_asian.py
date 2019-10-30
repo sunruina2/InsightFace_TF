@@ -48,11 +48,12 @@ if __name__ == '__main__':
 
     net_depth = 50  # resnet depth, default is 50
     epoch = 100000  # epoch to train the network
-    batch_size = 96  # batch size to train network
+    batch_size = 10  # batch size to train network
     lr_steps = [40000, 60000, 80000]  # learning rate to train network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
-    eval_datasets = ['lfw', 'cplfw', 'agedb_30']  # evluation datasets
+    eval_datasets = ['lfw']  # evluation datasets
+    # eval_datasets = ['lfw', 'cplfw', 'agedb_30']  # evluation datasets
     eval_db_path = '../ver_data'  # evluate datasets base path
     image_size = [112, 112]  # the image size
     num_output = 1728  # the image size
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     ckpt_path = '../auroua_asian_1029output/sgpu_res/ckpt'  # the ckpt file save path
     log_file_path = '../auroua_asian_1029output/sgpu_res/logs'  # the ckpt file save path
     saver_maxkeep = 100  # tf.train.Saver max keep ckpt files
-    buffer_size = 100000  # tf dataset api buffer size ?
+    buffer_size = 2000  # tf dataset api buffer size ?
     log_device_mapping = False  # show device placement log
     summary_interval = 300  # interval to save summary
     ckpt_interval = 10000  # intervals to save ckpt file
@@ -69,7 +70,9 @@ if __name__ == '__main__':
     continue_train_flag = 1
     # pretrain_ckpt_path = '../auroua_1022output2/mgpu_res/ckpt' + '/InsightFace_iter_' + '40000' + '.ckpt'
     # pretrain_ckpt_path = '../face_rg_files/premodels/pm_insight_auroua/ckpt_model_d' + '/InsightFace_iter_' + '710000' + '.ckpt'
-    pretrain_ckpt_path = '../auroua_model_d' + '/InsightFace_iter_' + '710000' + '.ckpt'
+    # pretrain_ckpt_path = '../auroua_model_d/InsightFace_iter_710000.ckpt'
+    # pretrain_ckpt_path = '../face_rg_files/premodels/pm_insight_auroua/ckpt_model_d/InsightFace_iter_710000.ckpt'
+    pretrain_ckpt_path = '../Insight_output/ms1v2mgpu_1030out/InsightFace_iter_10000.ckpt'
     tfrecords_file_path = '../train_data/Asian.tfrecords'  # path to the output of tfrecords file path
 
     global_step = tf.Variable(name='global_step', initial_value=0, trainable=False)
@@ -138,7 +141,7 @@ if __name__ == '__main__':
     # 3.6 define the learning rate schedule
     p = int(512.0/batch_size)
     lr_steps = [p*val for val in lr_steps]
-    print(lr_steps)
+    print('lr_steps:', lr_steps)
     lr = tf.train.piecewise_constant(global_step, boundaries=lr_steps, values=[0.001, 0.0005, 0.0003, 0.0001], name='lr_schedule')
     # 3.7 define the optimize method
     opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=momentum)
@@ -180,7 +183,10 @@ if __name__ == '__main__':
     sess.run(tf.global_variables_initializer())
 
     if continue_train_flag == 1:
-        restore_saver = tf.train.Saver()  # 继续训练的话，将这两行打开
+        print('restore model ...')
+        variables_to_restore = tf.contrib.framework.get_variables_to_restore(
+            exclude=['arcface_loss'])  # 不加载包含arcface_loss的所有变量
+        restore_saver = tf.train.Saver(variables_to_restore)  # 继续训练的话，将这两行打开
         restore_saver.restore(sess,  pretrain_ckpt_path)
     # 4 begin iteration
     if not os.path.exists(log_file_path):

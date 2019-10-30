@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorlayer as tl
 import argparse
-from data.mx2tfrecords import parse_function
+from data.mx2tfrecords import raw_parse_function
 import os
 # from nets.L_Resnet_E_IR import get_resnet
 # from nets.L_Resnet_E_IR_GBN import get_resnet
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     # random flip left right
     tfrecords_f = os.path.join(tfrecords_file_path, 'ms1.tfrecords')
     dataset = tf.data.TFRecordDataset(tfrecords_f)  # <TFRecordDatasetV1 shapes: (), types: tf.string>
-    dataset = dataset.map(parse_function)  # map，parse_function函数对每一个图进行处理，bgr位置转换，标准化，随机数据增强
+    dataset = dataset.map(raw_parse_function)  # map，parse_function函数对每一个图进行处理，bgr位置转换，标准化，随机数据增强
     dataset = dataset.shuffle(buffer_size=buffer_size)  # shuffle
     dataset = dataset.batch(batch_size)  # ((?, 112, 112, 3)， (?,))
     iterator = dataset.make_initializable_iterator()  # ((?, 112, 112, 3)， (?,))

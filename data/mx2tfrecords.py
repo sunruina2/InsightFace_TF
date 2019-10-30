@@ -97,7 +97,7 @@ def folder_parse_function(example_proto):
                 'label': tf.FixedLenFeature(shape=(), dtype=tf.int64)}
     features = tf.parse_single_example(example_proto, features)  # <class 'dict'>: {'image_raw': <tf.Tensor 'ParseSingleExample/ParseSingleExample:0' shape=() dtype=string>, 'label': <tf.Tensor 'ParseSingleExample/ParseSingleExample:1' shape=() dtype=int64>}
     # You can do more image distortion here for training data
-    img = tf.image.decode_jpeg(features['img'])
+    img = tf.decode_raw(features['img'], tf.uint8)
     img = tf.reshape(img, shape=features['shape'])  # (112, 112, 3)
 
     img = tf.cast(img, dtype=tf.float32)  # (112, 112, 3)
