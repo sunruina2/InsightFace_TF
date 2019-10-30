@@ -28,10 +28,15 @@ def multi_threads_download_Img(images_lines, threads=8):
 
 
 def single_download_Img(images_lines):
+    bad_n = 0
     for img_i in range(len(images_lines)):
-        downloadImage(img_i, 2)
+        res_flag = downloadImage(img_i, 2)
+        if not res_flag:
+            bad_n += 1
         if img_i % 10 == 0:
-            print(img_i, np.round(img_i / len(images_lines), 2))
+            print('s_i:', img_i, 'iter%:', np.round(img_i / (len(images_lines) - 1), 2), 'bad_n:', bad_n)
+
+    print('s_i:', img_i, 'iter%:', np.round(img_i / (len(images_lines) - 1), 2), 'bad_n:', bad_n)
 
 
 def getCoordinate(rect):
@@ -88,23 +93,25 @@ def downloadImage(line_i, scale_ratio):
     cropimg_path = img_path.replace('.jpg', '_crop.jpg')
     if os.path.exists(cropimg_path):
         # print('os.path.exists(os.path.join(root_dir, name, image_file))')
-        return
+        return True
 
     # try download image
     try:
         # print('try', url)
-        image_data = requests.get(url)
-        # image_data = requests.get(url, headers=headers)
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36'}
+        image_data = requests.get(url, headers=headers)
         if not image_data.ok:  # there are some wrong urls
             print('url_bug_with_name:', image_name, 'url', url)
-            return
+            return False
         else:
             # print('get success:', img_path)
             with open(img_path, 'wb') as f:
                 f.write(image_data.content)
     except Exception as e:
         print('url bug with file:', img_path, 'url:', url, 'e:', e)
-        return
+        return False
 
     # check image size
     right_height, right_width = getHeightWidth(hw)
@@ -115,7 +122,7 @@ def downloadImage(line_i, scale_ratio):
             # print('若实际url长宽与csv长宽不同时，判断url图的长宽比值和csv长宽比值之差小于0.01的情况下，做resize，否则丢弃')
             img = cv2.resize(img, (right_width, right_height))
         else:
-            return  # real image size not equal to record
+            return False  # real image size not equal to record
 
     # crop face from image
     location = getCoordinate(rect)
@@ -128,11 +135,10 @@ def downloadImage(line_i, scale_ratio):
 
 if __name__ == '__main__':
 
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36'}
-    root_dir = '/Users/finup/Desktop/rg/train_data/1mdb_face/IMDB_crop/'  # dir to save face
-    csv_file = '/Users/finup/Desktop/rg/train_data/1mdb_face/IMDb-Face-s.csv'  # csv file contains image information
-
+    # root_dir = '/Users/finup/Desktop/rg/train_data/1mdb_face/IMDB_crop/'  # dir to save face
+    # csv_file = '/Users/finup/Desktop/rg/train_data/1mdb_face/IMDb-Face-s.csv'  # csv file contains image information
+    root_dir = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/1mdb_face/IMDB_crop/'  # dir to save face
+    csv_file = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/1mdb_face/IMDb-Face.csv'  # csv file contains image info
     try:
         os.mkdir(root_dir)
     except:
@@ -147,4 +153,4 @@ if __name__ == '__main__':
 
     st = time.time()
     single_download_Img(image_lines)
-    print((time.time() - st) / 60)
+    print(np.round((time.time() - st) / 60, 2))
