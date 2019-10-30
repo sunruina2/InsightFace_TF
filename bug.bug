@@ -151,3 +151,104 @@ Caused by op 'split_1', defined at:
 InvalidArgumentError (see above for traceback): Number of ways to split should evenly divide the split dimension, but got split_dim 0 (size = 61) and num_split 2
          [[node split_1 (defined at train_nets_mgpu_new.py:135)  = Split[T=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](split_1/split_dim, _arg_img_labels_0_2)]]
          [[{{node GroupCrossDeviceControlEdges_0/tower_1/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1_bn1/Identity/_1780}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device="/job:localhost/replica:0/task:0/device:CPU:0", send_device_incarnation=1, tensor_name="edge_7502_...1/Identity", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:1"]()]]
+
+# bug4 after fix get_shape
+20191029192741  epoch 0, total_step 45480, total loss: [10.99, 15.12], inference loss: [4.24, 8.37], weight deacy loss: [6.76, 6.76], training accuracy is 0.531250, time 261.848 samples/sec
+Traceback (most recent call last):
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1334, in _do_call
+    return fn(*args)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1319, in _run_fn
+    options, feed_dict, fetch_list, target_list, run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1407, in _call_tf_sessionrun
+    run_metadata)
+tensorflow.python.framework.errors_impl.InvalidArgumentError: Determined shape must either match input shape along split_dim exactly if fully specified, or be less than the size of the input along split_dim if not fully specified.  Got: 60
+         [[{{node split_1}} = SplitV[T=DT_INT64, Tlen=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](_arg_img_labels_0_2, packed/_657, split_1/split_dim)]]
+         [[{{node GroupCrossDeviceControlEdges_0/tower_1/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2_bn/BatchNorm/Identity/_4042}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device="/job:localhost/replica:0/task:0/device:CPU:0", send_device_incarnation=1, tensor_name="edge_17229...m/Identity", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:1"]()]]
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "train_nets_mgpu_new.py", line 275, in <module>
+    feed_dict=feed_dict)  # MGPU Loss不同
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 929, in run
+    run_metadata_ptr)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1152, in _run
+    feed_dict_tensor, options, run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1328, in _do_run
+    run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1348, in _do_call
+    raise type(e)(node_def, op, message)
+tensorflow.python.framework.errors_impl.InvalidArgumentError: Determined shape must either match input shape along split_dim exactly if fully specified, or be less than the size of the input along split_dim if not fully specified.  Got: 60
+         [[node split_1 (defined at train_nets_mgpu_new.py:143)  = SplitV[T=DT_INT64, Tlen=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](_arg_img_labels_0_2, packed/_657, split_1/split_dim)]]
+         [[{{node GroupCrossDeviceControlEdges_0/tower_1/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2_bn/BatchNorm/Identity/_4042}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device="/job:localhost/replica:0/task:0/device:CPU:0", send_device_incarnation=1, tensor_name="edge_17229...m/Identity", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:1"]()]]
+
+Caused by op 'split_1', defined at:
+  File "train_nets_mgpu_new.py", line 143, in <module>
+    labels_s = tf.split(labels, num_or_size_splits=sn_lst, axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/ops/array_ops.py", line 1337, in split
+    value=value, size_splits=size_splits, axis=axis, num_split=num, name=name)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/ops/gen_array_ops.py", line 8148, in split_v
+    num_split=num_split, name=name)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/op_def_library.py", line 787, in _apply_op_helper
+    op_def=op_def)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/util/deprecation.py", line 488, in new_func
+    return func(*args, **kwargs)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/ops.py", line 3274, in create_op
+    op_def=op_def)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/ops.py", line 1770, in __init__
+    self._traceback = tf_stack.extract_stack()
+
+InvalidArgumentError (see above for traceback): Determined shape must either match input shape along split_dim exactly if fully specified, or be less than the size of the input along split_dim if not fully specified.  Got: 60
+         [[node split_1 (defined at train_nets_mgpu_new.py:143)  = SplitV[T=DT_INT64, Tlen=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](_arg_img_labels_0_2, packed/_657, split_1/split_dim)]]
+         [[{{node GroupCrossDeviceControlEdges_0/tower_1/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2_bn/BatchNorm/Identity/_4042}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device="/job:localhost/replica:0/task:0/device:CPU:0", send_device_incarnation=1, tensor_name="edge_17229...m/Identity", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:1"]()]]
+
+
+# bug5 batch =200
+20191030045254  epoch 0, total_step 29110, total loss: [11.08, 11.10], inference loss: [5.02, 5.04], weight deacy loss: [6.07, 6.07], training accuracy is 0.430000, time 300.974 samples/sec
+Traceback (most recent call last):
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1334, in _do_call
+    return fn(*args)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1319, in _run_fn
+    options, feed_dict, fetch_list, target_list, run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1407, in _call_tf_sessionrun
+    run_metadata)
+tensorflow.python.framework.errors_impl.InvalidArgumentError: Determined shape must either match input shape along split_dim exactly if fully specified, or be less than the size of the input along split_dim if not fully specified.  Got: 52
+         [[{{node split_1}} = SplitV[T=DT_INT64, Tlen=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](_arg_img_labels_0_2, packed/_657, split_1/split_dim)]]
+         [[{{node GroupCrossDeviceControlEdges_0/tower_1/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2_bn/BatchNorm/Identity/_4042}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device="/job:localhost/replica:0/task:0/device:CPU:0", send_device_incarnation=1, tensor_name="edge_17229...m/Identity", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:1"]()]]
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "train_nets_mgpu_new.py", line 275, in <module>
+    feed_dict=feed_dict)  # MGPU Loss不同
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 929, in run
+    run_metadata_ptr)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1152, in _run
+    feed_dict_tensor, options, run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1328, in _do_run
+    run_metadata)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1348, in _do_call
+    raise type(e)(node_def, op, message)
+tensorflow.python.framework.errors_impl.InvalidArgumentError: Determined shape must either match input shape along split_dim exactly if fully specified, or be less than the size of the input along split_dim if not fully specified.  Got: 52
+         [[node split_1 (defined at train_nets_mgpu_new.py:143)  = SplitV[T=DT_INT64, Tlen=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](_arg_img_labels_0_2, packed/_657, split_1/split_dim)]]
+         [[{{node GroupCrossDeviceControlEdges_0/tower_1/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2_bn/BatchNorm/Identity/_4042}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device="/job:localhost/replica:0/task:0/device:CPU:0", send_device_incarnation=1, tensor_name="edge_17229...m/Identity", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:1"]()]]
+
+Caused by op 'split_1', defined at:
+  File "train_nets_mgpu_new.py", line 143, in <module>
+    labels_s = tf.split(labels, num_or_size_splits=sn_lst, axis=0)  # MGPU 对image和label根据使用的gpu数量做平均拆分（默认两个gpu运算能力相同，如果gpu运算能力不同，可以自己设定拆分策略）
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/ops/array_ops.py", line 1337, in split
+    value=value, size_splits=size_splits, axis=axis, num_split=num, name=name)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/ops/gen_array_ops.py", line 8148, in split_v
+    num_split=num_split, name=name)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/op_def_library.py", line 787, in _apply_op_helper
+    op_def=op_def)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/util/deprecation.py", line 488, in new_func
+    return func(*args, **kwargs)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/ops.py", line 3274, in create_op
+    op_def=op_def)
+  File "/data/sunruina/anaconda2/envs/py36ten12/lib/python3.6/site-packages/tensorflow/python/framework/ops.py", line 1770, in __init__
+    self._traceback = tf_stack.extract_stack()
+
+InvalidArgumentError (see above for traceback): Determined shape must either match input shape along split_dim exactly if fully specified, or be less than the size of the input along split_dim if not fully specified.  Got: 52
+         [[node split_1 (defined at train_nets_mgpu_new.py:143)  = SplitV[T=DT_INT64, Tlen=DT_INT64, num_split=2, _device="/job:localhost/replica:0/task:0/device:CPU:0"](_arg_img_labels_0_2, packed/_657, split_1/split_dim)]]
+         [[{{node GroupCrossDeviceControlEdges_0/tower_1/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2_bn/BatchNorm/Identity/_4042}} = _Recv[client_terminated=false, recv_device="/job:localhost/replica:0/task:0/device:GPU:1", send_device="/job:localhost/replica:0/task:0/device:CPU:0", send_device_incarnation=1, tensor_name="edge_17229...m/Identity", tensor_type=DT_FLOAT, _device="/job:localhost/replica:0/task:0/device:GPU:1"]()]]

@@ -84,7 +84,7 @@ if __name__ == '__main__':
     # args = get_parser()
     net_depth = 50  # resnet depth, default is 50
     epoch = 100000  # epoch to train the network
-    batch_size = 200  # batch size to train network
+    batch_size = 50  # batch size to train network
     lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     summary_path = '../auroua_asian_1029output/mgpu_res/summary'  # the summary file save path
     ckpt_path = '../auroua_asian_1029output/mgpu_res/ckpt'  # the ckpt file save path
     saver_maxkeep = 100  # tf.train.Saver max keep ckpt files
-    buffer_size = 100000  # tf dataset api buffer size  # MGPU 变大*10
+    buffer_size = 3000  # tf dataset api buffer size  # MGPU 变大*10
     log_device_mapping = False  # show device placement log  # MGPU 删掉了log_file_path参数
     summary_interval = 500  # interval to save summary
     ckpt_interval = 5000  # intervals to save ckpt file  # MGPU 变小/2
