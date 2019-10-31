@@ -135,10 +135,10 @@ def downloadImage(line_i, scale_ratio):
 
 if __name__ == '__main__':
 
-    # root_dir = '/Users/finup/Desktop/rg/train_data/1mdb_face/IMDB_crop/'  # dir to save face
-    # csv_file = '/Users/finup/Desktop/rg/train_data/1mdb_face/IMDb-Face-s.csv'  # csv file contains image information
-    root_dir = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/1mdb_face/IMDB_crop/'  # dir to save face
-    csv_file = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/1mdb_face/IMDb-Face.csv'  # csv file contains image info
+    root_dir = '/Users/finup/Desktop/rg/train_data/1mdb_face/IMDB_crop/'  # dir to save face
+    csv_file = '/Users/finup/Desktop/rg/train_data/1mdb_face/IMDb-Face.csv'  # csv file contains image information
+    # root_dir = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/1mdb_face/IMDB_crop/'  # dir to save face
+    # csv_file = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/1mdb_face/IMDb-Face.csv'  # csv file contains image info
     try:
         os.mkdir(root_dir)
     except:
