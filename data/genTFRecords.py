@@ -1,6 +1,3 @@
-
-
-
 import argparse
 import os
 import tensorflow as tf
@@ -84,13 +81,16 @@ class ClassificationImageData:
         paths, labels = self.get_path_label(read_dir)
         assert (len(paths) == len(labels))
         total = len(paths)  # 样本数
+        print('All sampls:', total)
         cnt = 0  # 写入计数
         for p, l in zip(paths, labels):
             b, g, r = cv2.split(cv2.imread(p))
             imgcv_rgb = cv2.merge([r, g, b])
             self.add_record(imgcv_rgb, l, writer)
             cnt += 1
-            print('%d/%d' % (cnt, total), end='\r')
+            if cnt % 1000 == 0:
+                print('finish:', np.round(cnt / total, 2))
+            # print('%d/%d' % (cnt, total), end='\r')
         writer.close()
         print('done![%d/%d]' % (cnt, total))
         print('class num: %d' % self.label_c_num)
@@ -151,39 +151,52 @@ def get_args():
 
 
 if __name__ == "__main__":
-    # args = get_args()
+    # # args = get_args()
+    #
+    # mode = 'folders'
+    # image_size = 112
+    # place_lst = ['Asian', 'African', 'Indian', 'Caucasian']
+    #
+    # # /Users/finup/Desktop/rg/train_data/Asian.tfrecord
+    # # done![4947/4947]
+    # # class num: 1728
+    # #
+    # # /Users/finup/Desktop/rg/train_data/African.tfrecord
+    # # done![3863/3863]
+    # # class num: 1543
+    # #
+    # # /Users/finup/Desktop/rg/train_data/Indian.tfrecord
+    # # done![5182/5182]
+    # # class num: 1923
+    # #
+    # # /Users/finup/Desktop/rg/train_data/Caucasian.tfrecord
+    # # done![271354/271354]
+    # # class num: 11326
+    #
+    # for i in place_lst:
+    #
+    #     read_dir = '/Users/finup/Desktop/rg/rg_game/data/training/' + i
+    #     save_path = '/Users/finup/Desktop/rg/train_data/'+i+'.tfrecorda'
+    #     print(save_path)
+    #
+    #     cid = ClassificationImageData(img_size=image_size)
+    #     if mode == 'folders':
+    #         cid.write_tfrecord_from_folders(read_dir, save_path)
+    #     elif mode == 'mxrec':
+    #         cid.write_tfrecord_from_mxrec(read_dir, save_path)
+    #     else:
+    #         raise ('ERROR: wrong mode (only folders and mxrec are supported)')
 
     mode = 'folders'
     image_size = 112
-    place_lst = ['Asian', 'African', 'Indian', 'Caucasian']
+    read_dir = '/Users/finup/Desktop/rg/train_data/train_celebrity/celebrity'
+    save_path = '/Users/finup/Desktop/rg/train_data/asian_cele.tfrecords'
+    print(save_path)
 
-    # /Users/finup/Desktop/rg/train_data/Asian.tfrecord
-    # done![4947/4947]
-    # class num: 1728
-    #
-    # /Users/finup/Desktop/rg/train_data/African.tfrecord
-    # done![3863/3863]
-    # class num: 1543
-    #
-    # /Users/finup/Desktop/rg/train_data/Indian.tfrecord
-    # done![5182/5182]
-    # class num: 1923
-    #
-    # /Users/finup/Desktop/rg/train_data/Caucasian.tfrecord
-    # done![271354/271354]
-    # class num: 11326
-
-    for i in place_lst:
-
-        read_dir = '/Users/finup/Desktop/rg/rg_game/data/training/' + i
-        save_path = '/Users/finup/Desktop/rg/train_data/'+i+'.tfrecorda'
-        print(save_path)
-
-        cid = ClassificationImageData(img_size=image_size)
-        if mode == 'folders':
-            cid.write_tfrecord_from_folders(read_dir, save_path)
-        elif mode == 'mxrec':
-            cid.write_tfrecord_from_mxrec(read_dir, save_path)
-        else:
-            raise ('ERROR: wrong mode (only folders and mxrec are supported)')
-
+    cid = ClassificationImageData(img_size=image_size)
+    if mode == 'folders':
+        cid.write_tfrecord_from_folders(read_dir, save_path)
+    elif mode == 'mxrec':
+        cid.write_tfrecord_from_mxrec(read_dir, save_path)
+    else:
+        raise ('ERROR: wrong mode (only folders and mxrec are supported)')

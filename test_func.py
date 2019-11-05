@@ -317,16 +317,16 @@
 # p.join()  # 等待所有的子进程结束
 # print(time()-st)
 
-
-import requests
-url_temp = 'https://images-na.ssl-images-amazon.com/images/M/MV5BMjM3ODk1NjEzOV5BMl5BanBnXkFtZTgwOTAyNjU1MzE@._V1_.jpg'
-
-headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36'}
-image_data = requests.get(url_temp, headers=headers)
-print(image_data.ok)
-print(len(image_data.content))
-with open('j.jpg', "wb") as w:
-    w.write(image_data.content)
+#
+# import requests
+# url_temp = 'https://images-na.ssl-images-amazon.com/images/M/MV5BMjM3ODk1NjEzOV5BMl5BanBnXkFtZTgwOTAyNjU1MzE@._V1_.jpg'
+#
+# headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36'}
+# image_data = requests.get(url_temp, headers=headers)
+# print(image_data.ok)
+# print(len(image_data.content))
+# with open('j.jpg', "wb") as w:
+#     w.write(image_data.content)
 
 # s = requests.Session()
 # s.mount('http://', requests.adapters.HTTPAdapter(max_retries=10))
@@ -335,3 +335,93 @@ with open('j.jpg', "wb") as w:
 # with open('i.jpg', "wb") as w:
 #     w.write(s.get(url_temp).content)
 
+
+import tensorflow as tf
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import math
+from PIL import Image
+# 用来正常显示中文
+plt.rcParams["font.sans-serif"] = ["SimHei"]
+
+
+def rotate_about_center(src, angle, scale=1.):
+    w = src.shape[1]
+    h = src.shape[0]
+    rangle = np.deg2rad(angle)  # angle in radians
+    # now calculate new image width and height
+    nw = (abs(np.sin(rangle)*h) + abs(np.cos(rangle)*w))*scale
+    nh = (abs(np.cos(rangle)*h) + abs(np.sin(rangle)*w))*scale
+    # ask OpenCV for the rotation matrix
+    rot_mat = cv2.getRotationMatrix2D((nw*0.5, nh*0.5), angle, scale)
+    # calculate the move from the old center to the new center combined
+    # with the rotation
+    rot_move = np.dot(rot_mat, np.array([(nw-w)*0.5, (nh-h)*0.5,0]))
+    # the move only affects the translation, so update the translation
+    # part of the transform
+    rot_mat[0, 2] += rot_move[0]
+    rot_mat[1, 2] += rot_move[1]
+    return cv2.warpAffine(src, rot_mat, (int(math.ceil(nw)), int(math.ceil(nh))), flags=cv2.INTER_LANCZOS4)
+
+
+if __name__ == "__main__":
+    image = cv2.imread("/Users/finup/Desktop/rg/train_data/training_folder/Asian/00694/00002.jpg")
+    print(image.shape, type(image))
+    # 将图片进行随机裁剪为280×280
+    crop_img = tf.random_crop(image, [100, 80, 3])
+    print(crop_img.shape, type(crop_img))
+
+    def random_rotate_image(img):
+        # 先延伸为正方形
+        max_l = max(len(img), len(img[0]))
+        min_l = min(len(img), len(img[0]))
+        if max_l != min_l:
+            dis = int((max_l-min_l)/2)
+            last = max_l - (min_l + dis)
+            if len(img) == max_l:
+                img = cv2.copyMakeBorder(img, dis, last, 0, 0, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            elif len(img[0]) == max_l:
+                img = cv2.copyMakeBorder(img, 0, 0, dis, last, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            else:
+                pass
+        angle = np.random.uniform(low=-10.0, high=10.0)
+        r_img = rotate_about_center(img, angle)
+        short = int(abs(len(r_img) - len(img))/2)
+        last = max(len(r_img), len(img[0]) - short)
+        r_img = r_img[(sz1 - sz2 + v):(sz1 + sz2 + v), (sz1 - sz2 + h):(sz1 + sz2 + h), :]
+        return
+
+    rotate_image = random_rotate_image(image)
+    print(rotate_image.shape, type(rotate_image))
+    r_s = rotate_image.shape
+    h = r_s[0]
+    w = r_s[1]
+
+    bb[0] = np.maximum(h - margin / 2, 0)  # 左上角x
+    bb[1] = np.maximum(det[1] - margin / 2, 0)  # 左上角x
+    bb[2] = np.minimum(det[2] + margin / 2, img.shape[1])
+    bb[3] = np.minimum(det[3] + margin / 2, img.shape[0])
+
+    sess = tf.InteractiveSession()
+    # 显示图片
+    # cv2.imwrite("img/crop.jpg",crop_img.eval())
+    plt.figure(1)
+    plt.subplot(141)
+    # 将图片由BGR转成RGB
+    img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    plt.imshow(img)
+    plt.title("raw")
+
+    plt.subplot(142)
+    crop_img = cv2.cvtColor(crop_img.eval(), cv2.COLOR_BGR2RGB)
+    plt.imshow(crop_img)
+    plt.title("crop_img")
+
+    plt.subplot(143)
+    rotate_image = cv2.cvtColor(rotate_image, cv2.COLOR_BGR2RGB)
+    plt.imshow(rotate_image)
+    plt.title("rotate_image")
+
+    plt.show()
+    sess.close()
