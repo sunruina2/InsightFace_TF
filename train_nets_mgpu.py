@@ -87,25 +87,28 @@ if __name__ == '__main__':
     # 1. define global parameters
     # args = get_parser()
     batch_size = 220  # batch size to train network
-    buffer_size = 100000  # tf dataset api buffer size  # MGPU 变大*10
+    buffer_size = 440  # tf dataset api buffer size  # MGPU 变大*10
     lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
     lr_values = [0.005, 0.001, 0.0005, 0.0003, 0.0001]  # learning rate to train network
     num_output = 85742  # the image size
-    tfrecords_file_path = '../train_data/ms1v2.tfrecords'  # path to the output of tfrecords file path
+    # tfrecords_file_path = '../train_data/ms1v2.tfrecords'  # path to the output of tfrecords file path
+    tfrecords_file_path = '../train_data/dc_marking_trans_avg_k.tfrecords'  # path to the output of tfrecords file path
     # num_output = 1728  # the image size
     # tfrecords_file_path = '../train_data/Asian.tfrecords'  # path to the output of tfrecords file path
-    continue_train_flag, start_count = 1, 25000
-    pretrain_ckpt_path = '../insight_out/auroua25000_1030output/mgpu_res/ckpt/InsightFace_iter_' + str(start_count) + '.ckpt'
-    out_dt = '1030'
-    summary_path = '../insight_out/' + out_dt + '_auroua_out/mgpu_res/summary'  # the summary file save path
-    ckpt_path = '../insight_out/' + out_dt + '_auroua_out/mgpu_res/ckpt'  # the ckpt file save path
+    continue_train_flag, start_count = 1, 500000
+    pretrain_ckpt_path = '../insight_out/1030_auroua_out/mgpu_res/ckpt/InsightFace_iter_' + str(start_count) + '.ckpt'
+    out_dt = '1107'
+    summary_path = '../insight_out/' + out_dt + '_auroua_out_office_avg/mgpu_res/summary'  # the summary file save path
+    ckpt_path = '../insight_out/' + out_dt + '_auroua_out_office_avg/mgpu_res/ckpt'  # the ckpt file save path
+    # ckpt_count_interval = 10  # intervals to save ckpt file  # MGPU 变小/2
+    ckpt_epoch_interval = 5  # intervals to save ckpt file  # MGPU 变小/2
 
     # 打印关键参数到nohup out中
     key_para = {'batch_size': batch_size, 'buffer_size': buffer_size, 'lr_steps': lr_steps, 'lr_values': lr_values,
                 'num_output': num_output, 'tfrecords_file_path': tfrecords_file_path,
                 'continue_train_flag': continue_train_flag, 'start_count': start_count,
                 'pretrain_ckpt_path': pretrain_ckpt_path, 'out_dt': out_dt, 'summary_path': summary_path,
-                'ckpt_path': ckpt_path}
+                'ckpt_path': ckpt_path, 'ckpt_count_interval': ckpt_count_interval, 'ckpt_epoch_interval': ckpt_epoch_interval}
     for k, v in key_para.items():
         print(k, '        ', v)
 
@@ -119,7 +122,6 @@ if __name__ == '__main__':
     saver_maxkeep = 100  # tf.train.Saver max keep ckpt files
     log_device_mapping = False  # show device placement log  # MGPU 删掉了log_file_path参数
     summary_interval = 500  # interval to save summary
-    ckpt_interval = 5000  # intervals to save ckpt file  # MGPU 变小/2
     validate_interval = 5000  # intervals to save ckpt file
     show_info_interval = 10  # intervals to show information
     num_gpus = [0, 1]  # the num of gpus')  # MGPU
@@ -303,8 +305,9 @@ if __name__ == '__main__':
                     summary.add_summary(summary_op_val, count)
 
                 # save ckpt files
-                if count > 0 and count % ckpt_interval == 0:
-                    filename = 'InsightFace_iter_{:d}'.format(count) + '.ckpt'
+                # if count > 0 and i % ckpt_count_interval == 0:
+                if count > 0 and i % ckpt_epoch_interval == 0:
+                    filename = 'InsightFace_iter_'+str(count)+'-'+str(i) + '.ckpt'
                     filename = os.path.join(ckpt_path, filename)
                     saver.save(sess, filename)
                 # # validate
