@@ -252,7 +252,7 @@ if __name__ == '__main__':
     summary_op = tf.summary.merge(summaries)
 
     # Create a saver.
-    saver = tf.train.Saver(tf.global_variables())  # MGPU 没加 max_to_keep=args.saver_maxkeep ，加了tf.global_variables()
+    saver = tf.train.Saver(tf.global_variables(), max_to_keep=10)  # MGPU 没加 max_to_keep=args.saver_maxkeep ，加了tf.global_variables()
     # init all variables
     sess.run(tf.global_variables_initializer())
 
