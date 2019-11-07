@@ -84,7 +84,7 @@ class ClassificationImageData:
         print('All sampls:', total)
         cnt = 0  # 写入计数
         for p, l in zip(paths, labels):
-            b, g, r = cv2.split(cv2.imread(p))
+            b, g, r = cv2.split(cv2.resize(cv2.imread(p), (self.img_size, self.img_size)))
             imgcv_rgb = cv2.merge([r, g, b])
             self.add_record(imgcv_rgb, l, writer)
             cnt += 1
@@ -186,11 +186,18 @@ if __name__ == "__main__":
     #         cid.write_tfrecord_from_mxrec(read_dir, save_path)
     #     else:
     #         raise ('ERROR: wrong mode (only folders and mxrec are supported)')
-
+    import time
+    st = time.time()
     mode = 'folders'
     image_size = 112
-    read_dir = '/Users/finup/Desktop/rg/train_data/train_celebrity/celebrity'
-    save_path = '/Users/finup/Desktop/rg/train_data/asian_cele.tfrecords'
+    # read_dir = '/Users/finup/Desktop/rg/train_data/train_celebrity/celebrity'
+    # save_path = '/Users/finup/Desktop/rg/train_data/asian_cele.tfrecords'
+    # '''样本数2830146'''
+    # read_dir = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/train_celebrity/celebrity'
+    # save_path = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/asian_cele.tfrecords'
+    '''office_avg'''
+    read_dir = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/dc_marking_trans_avg_k'
+    save_path = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/dc_marking_trans_avg_k.tfrecords'
     print(save_path)
 
     cid = ClassificationImageData(img_size=image_size)
@@ -200,3 +207,5 @@ if __name__ == "__main__":
         cid.write_tfrecord_from_mxrec(read_dir, save_path)
     else:
         raise ('ERROR: wrong mode (only folders and mxrec are supported)')
+
+    print(np.round((time.time()-st)/60, 2))
