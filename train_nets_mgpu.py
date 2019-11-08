@@ -87,20 +87,22 @@ if __name__ == '__main__':
     # 1. define global parameters
     # args = get_parser()
     batch_size = 220  # batch size to train network
-    buffer_size = 440  # tf dataset api buffer size  # MGPU 变大*10
-    lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
-    lr_values = [0.005, 0.001, 0.0005, 0.0003, 0.0001]  # learning rate to train network
-    num_output = 109  # the image size
+    buffer_size = 50000  # tf dataset api buffer size  # MGPU 变大*10
+    lr_steps = [40000, 60000, 80000]  # learning rate to train network
+    lr_values = [0.005, 0.001, 0.0005, 0.0003]  # learning rate to train network
+    num_output = 93979  # the image size
     # tfrecords_file_path = '../train_data/ms1v2.tfrecords'  # path to the output of tfrecords file path
-    tfrecords_file_path = '../train_data/dc_marking_trans_avg_k.tfrecords'  # path to the output of tfrecords file path
+    tfrecords_file_path = '../train_data/asian_cele.tfrecords'  # path to the output of tfrecords file path
+    # tfrecords_file_path = '../train_data/dc_marking_trans_avg_k.tfrecords'  # path to the output of tfrecords file path
     # num_output = 1728  # the image size
     # tfrecords_file_path = '../train_data/Asian.tfrecords'  # path to the output of tfrecords file path
-    continue_train_flag, start_count = 1, 500000
+    continue_train_flag, start_count = 0, 0
     pretrain_ckpt_path = '../insight_out/1030_auroua_out/mgpu_res/ckpt/InsightFace_iter_' + str(start_count) + '.ckpt'
     out_dt = '1107'
-    summary_path = '../insight_out/' + out_dt + '_auroua_out_office_avg/mgpu_res/summary'  # the summary file save path
-    ckpt_path = '../insight_out/' + out_dt + '_auroua_out_office_avg/mgpu_res/ckpt'  # the ckpt file save path
-    ckpt_count_interval = 10*(int(906/batch_size)+1)  # intervals to save ckpt file  # MGPU 变小/2
+    summary_path = '../insight_out/' + out_dt + '_auroua_assiancele_0train/mgpu_res/summary'  # the summary file save path
+    ckpt_path = '../insight_out/' + out_dt + '_auroua_assiancele_0train/mgpu_res/ckpt'  # the ckpt file save path
+    ckpt_count_interval = 50000  # intervals to save ckpt file  # MGPU 变小/2
+    # ckpt_count_interval = 10*(int(906/batch_size)+1)  # intervals to save ckpt file  # MGPU 变小/2
 
     # 打印关键参数到nohup out中
     key_para = {'batch_size': batch_size, 'buffer_size': buffer_size, 'lr_steps': lr_steps, 'lr_values': lr_values,
