@@ -200,7 +200,7 @@ if __name__ == "__main__":
     image_size = 112
     acele_dir = '/Users/finup/Desktop/rg/train_data/train_celebrity/celebrity_sample'
     ms1_dir = '/Users/finup/Desktop/rg/train_data/ms1_mxnet/'
-    save_path = '/Users/finup/Desktop/rg/train_data/ms1_and_acele.tfrecords'
+    save_path = '/Users/finup/Desktop/rg/train_data/ms1_asiancele.tfrecords'
     '''样本数2830146'''
     # read_dir = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/train_celebrity/celebrity'
     # save_path = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/asian_cele.tfrecords'
