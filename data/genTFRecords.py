@@ -94,7 +94,7 @@ class ClassificationImageData:
             imgcv_rgb = cv2.merge([r, g, b])
             self.add_record(imgcv_rgb, l, self.writer)
             cnt += 1
-            if cnt % 10 == 0:
+            if cnt % 2000 == 0:
                 print('finish:', np.round(cnt / total, 2), cnt, total)
         print('done![%d/%d]' % (cnt, total))
         print('class num: %d' % self.label_c_num)
@@ -120,7 +120,7 @@ class ClassificationImageData:
             img = misc.imread(img).astype(np.uint8)
             self.add_record(img, l, self.writer)
             cnt += 1
-            if cnt % 100 == 0:
+            if cnt % 2000 == 0:
                 print('finish:', np.round(cnt / total, 4), cnt, total)
         self.label_c_num = len(set(labels))
         print('done![%d/%d]' % (cnt, total))
