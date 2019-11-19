@@ -197,9 +197,17 @@ if __name__ == "__main__":
     st = time.time()
     # mode = 'folders'
     image_size = 112
-    acele_dir = '/Users/finup/Desktop/rg/train_data/train_celebrity/celebrity_sample'
-    ms1_dir = '/Users/finup/Desktop/rg/train_data/ms1_mxnet/'
-    save_path = '/Users/finup/Desktop/rg/train_data/ms1_asiancele.tfrecords'
+
+    father_path = str(os.path.abspath(__file__).split('InsightFace_TF/')[0])
+    # acele_dir = '/Users/finup/Desktop/rg/train_data/train_celebrity/celebrity_sample'
+    # ms1_dir = '/Users/finup/Desktop/rg/train_data/ms1_mxnet/'
+    # save_path = '/Users/finup/Desktop/rg/train_data/ms1_asiancele.tfrecords'
+    acele_dir = father_path + 'train_data/train_celebrity/celebrity'
+    ms1_dir = father_path + 'train_data/ms1_mxnet/'
+    save_path = father_path + 'train_data/ms1_asiancele.tfrecords'
+    print(acele_dir)
+    print(ms1_dir)
+    print(save_path)
     '''样本数2830146'''
     # read_dir = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/train_celebrity/celebrity'
     # save_path = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/asian_cele.tfrecords'
