@@ -81,7 +81,7 @@ def average_gradients(tower_grads):
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
 
     # 1. define global parameters
     batch_size = 110  # batch size to train network
@@ -100,7 +100,8 @@ if __name__ == '__main__':
     out_dt = '1119'
     summary_path = '../insight_out/' + out_dt + '_continue_50w_ms1/sgpu_res/summary'  # the summary file save path
     ckpt_path = '../insight_out/' + out_dt + '_continue_50w_ms1/sgpu_res/ckpt'  # the ckpt file save path
-    log_file_path = '../insight_out/' + out_dt + '_continue_50w_ms1/sgpu_res/logs'  # the ckpt file save path
+    ckpt_count_interval = 50000  # intervals to save ckpt file  # MGPU 变小/2
+    # ckpt_count_interval = 10*(int(906/batch_size)+1)  # intervals to save ckpt file  # MGPU 变小/2
 
     # 打印关键参数到nohup out中
     key_para = {'batch_size': batch_size, 'buffer_size': buffer_size, 'lr_steps': lr_steps, 'lr_values': lr_values,

@@ -71,7 +71,6 @@ class ClassificationImageData:
         return img
 
     def add_record(self, img, label, writer):
-        print(label, type(label))
         img = to_rgb(img)
         img = cv2.resize(img, (self.img_size, self.img_size)).astype(np.uint8)
         shape = img.shape
@@ -88,16 +87,15 @@ class ClassificationImageData:
         assert (len(paths) == len(labels))
         self.label_n = len(set(labels))
         total = len(paths)  # 样本数
-        print('All sampls:', total)
+        # print('All sampls:', total)
         cnt = 0  # 写入计数
         for p, l in zip(paths, labels):
             b, g, r = cv2.split(cv2.resize(cv2.imread(p), (self.img_size, self.img_size)))
             imgcv_rgb = cv2.merge([r, g, b])
             self.add_record(imgcv_rgb, l, self.writer)
             cnt += 1
-            if cnt % 1000 == 0:
-                print('finish:', np.round(cnt / total, 2))
-            # print('%d/%d' % (cnt, total), end='\r')
+            if cnt % 10 == 0:
+                print('finish:', np.round(cnt / total, 2), cnt, total)
         print('done![%d/%d]' % (cnt, total))
         print('class num: %d' % self.label_c_num)
 
@@ -116,14 +114,14 @@ class ClassificationImageData:
         for i in imgidx:
             img_info = imgrec.read_idx(i)
             header, img = mx.recordio.unpack(img_info)
-            l = int(header.label)+(self.label_n)
-            print('mxnet', l, type(l))
+            l = int(header.label) + self.label_n
             labels.append(l)
             img = io.BytesIO(img)
             img = misc.imread(img).astype(np.uint8)
             self.add_record(img, l, self.writer)
             cnt += 1
-            print('%d/%d' % (cnt, total), end='\r')
+            if cnt % 100 == 0:
+                print('finish:', np.round(cnt / total, 4), cnt, total)
         self.label_c_num = len(set(labels))
         print('done![%d/%d]' % (cnt, total))
         print('class num: %d' % self.label_c_num)
@@ -195,6 +193,7 @@ if __name__ == "__main__":
     #     else:
     #         raise ('ERROR: wrong mode (only folders and mxrec are supported)')
     import time
+
     st = time.time()
     # mode = 'folders'
     image_size = 112
@@ -212,6 +211,7 @@ if __name__ == "__main__":
     cid = ClassificationImageData(img_size=image_size, write_path=save_path)
 
     cid.write_tfrecord_from_folders(acele_dir)
+    print('time:', np.round((time.time() - st) / 60, 2))
     cid.write_tfrecord_from_mxrec(ms1_dir)
     cid.write_close()
-    print(np.round((time.time()-st)/60, 2))
+    print('time:', np.round((time.time() - st) / 60, 2))
