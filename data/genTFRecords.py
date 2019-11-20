@@ -202,7 +202,8 @@ if __name__ == "__main__":
     # acele_dir = '/Users/finup/Desktop/rg/train_data/train_celebrity/celebrity_sample'
     # ms1_dir = '/Users/finup/Desktop/rg/train_data/ms1_mxnet/'
     # save_path = '/Users/finup/Desktop/rg/train_data/ms1_asiancele.tfrecords'
-    acele_dir = father_path + 'train_data/train_celebrity/celebrity'
+    acele_dir = father_path + 'train_data/train_celebrity/cele_small'
+    # acele_dir = father_path + 'train_data/train_celebrity/celebrity'
     ms1_dir = father_path + 'train_data/ms1_mxnet/'
     save_path = father_path + 'train_data/ms1_asiancele.tfrecords'
     print(acele_dir)
