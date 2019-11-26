@@ -84,8 +84,8 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
 
     # 1. define global parameters
-    batch_size = 220  # batch size to train network
-    buffer_size = 80000  # tf dataset api buffer size ?
+    batch_size = 200  # batch size to train network
+    buffer_size = 100000  # tf dataset api buffer size ?
     # buffer_size = 2000  # tf dataset api buffer size ?
 
     lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
