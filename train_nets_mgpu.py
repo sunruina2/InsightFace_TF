@@ -84,28 +84,30 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
 
     # 1. define global parameters
-    batch_size = 110  # batch size to train network
-    buffer_size = 100000  # tf dataset api buffer size ?
+    batch_size = 220  # batch size to train network
+    buffer_size = 80000  # tf dataset api buffer size ?
     # buffer_size = 2000  # tf dataset api buffer size ?
 
     lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
     lr_values = [0.005, 0.001, 0.0005, 0.0003, 0.0001]  # learning rate to train network
     # lr_values = [0.0025, 0.0005, 0.00025, 0.00015, 0.00005]  # learning rate to train network
+    loss_s = 160.
+    loss_m = 0.5
 
-    num_output,continue_train_flag, start_count = 85742, 1, 500000  # the image size
-    tfrecords_file_path = '../train_data/ms1v2.tfrecords'  # path to the output of tfrecords file path
+    num_output, continue_train_flag, start_count = 179721, 1, 500000  # the image size
+    tfrecords_file_path = '../train_data/ms1_asiancele.tfrecords'  # path to the output of tfrecords file path
     # tfrecords_file_path = '../train_data/Asian.tfrecords'  # path to the output of tfrecords file path
     pretrain_ckpt_path = '../insight_out/1030_auroua_out/mgpu_res/ckpt/InsightFace_iter_' + str(start_count) + '.ckpt'
 
-    out_dt = '1119'
-    summary_path = '../insight_out/' + out_dt + '_continue_50w_ms1/sgpu_res/summary'  # the summary file save path
-    ckpt_path = '../insight_out/' + out_dt + '_continue_50w_ms1/sgpu_res/ckpt'  # the ckpt file save path
+    out_dt = '1126'
+    summary_path = '../insight_out/' + out_dt + '_continue_50w_ms1assian_s160/sgpu_res/summary'  # the summary file save path
+    ckpt_path = '../insight_out/' + out_dt + '_continue_50w_ms1assian_s160/sgpu_res/ckpt'  # the ckpt file save path
     ckpt_count_interval = 50000  # intervals to save ckpt file  # MGPU 变小/2
     # ckpt_count_interval = 10*(int(906/batch_size)+1)  # intervals to save ckpt file  # MGPU 变小/2
 
     # 打印关键参数到nohup out中
     key_para = {'batch_size': batch_size, 'buffer_size': buffer_size, 'lr_steps': lr_steps, 'lr_values': lr_values,
-                'num_output': num_output, 'tfrecords_file_path': tfrecords_file_path,
+                'loss_s':loss_s,'loss_m':loss_m,'num_output': num_output, 'tfrecords_file_path': tfrecords_file_path,
                 'continue_train_flag': continue_train_flag, 'start_count': start_count,
                 'pretrain_ckpt_path': pretrain_ckpt_path, 'out_dt': out_dt, 'summary_path': summary_path,
                 'ckpt_path': ckpt_path, 'ckpt_count_interval': ckpt_count_interval}
@@ -188,7 +190,7 @@ if __name__ == '__main__':
                     net = get_resnet(images_s[iter_gpus], net_depth, type='ir', w_init=w_init_method, trainable=True,
                                      keep_rate=dropout_rate)
                     logit = arcface_loss(embedding=net.outputs, labels=labels_s[iter_gpus], w_init=w_init_method,
-                                         out_num=num_output)
+                                         out_num=num_output, s= loss_s, m= loss_m)
                     # Reuse variables for the next tower.
                     tf.get_variable_scope().reuse_variables()  # 同名变量将会复用，假设现在gpu0上创建了两个变量var0，var1，那么在gpu1上创建计算图的时候，如果还有var0和var1，则默认复用之前gpu0上的创建的那两个值
                     # define the cross entropy
