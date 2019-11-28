@@ -101,8 +101,8 @@ if __name__ == '__main__':
     pretrain_ckpt_path = '../insight_out/1030_auroua_out/mgpu_res/ckpt/InsightFace_iter_' + str(start_count) + '.ckpt'
 
     out_dt = '1128'
-    summary_path = '../insight_out/' + out_dt + '_ms1assian_s160/mgpu_res/summary'  # the summary file save path
-    ckpt_path = '../insight_out/' + out_dt + '_ms1assian_s160/mgpu_res/ckpt'  # the ckpt file save path
+    summary_path = '../insight_out/' + out_dt + '_ms1assian_s64/mgpu_res/summary'  # the summary file save path
+    ckpt_path = '../insight_out/' + out_dt + '_ms1assian_s64/mgpu_res/ckpt'  # the ckpt file save path
     ckpt_count_interval = 50000  # intervals to save ckpt file  # MGPU 变小/2
     # ckpt_count_interval = 10*(int(906/batch_size)+1)  # intervals to save ckpt file  # MGPU 变小/2
 
