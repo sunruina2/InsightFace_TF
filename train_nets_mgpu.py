@@ -81,7 +81,8 @@ def average_gradients(tower_grads):
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3"
 
     # 1. define global parameters
     batch_size = 200  # batch size to train network
@@ -91,17 +92,17 @@ if __name__ == '__main__':
     lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
     lr_values = [0.005, 0.001, 0.0005, 0.0003, 0.0001]  # learning rate to train network
     # lr_values = [0.0025, 0.0005, 0.00025, 0.00015, 0.00005]  # learning rate to train network
-    loss_s = 160.
+    loss_s = 64
     loss_m = 0.5
 
-    num_output, continue_train_flag, start_count = 179721, 1, 500000  # the image size
+    num_output, continue_train_flag, start_count = 179721, 0, 0  # the image size
     tfrecords_file_path = '../train_data/ms1_asiancele.tfrecords'  # path to the output of tfrecords file path
     # tfrecords_file_path = '../train_data/Asian.tfrecords'  # path to the output of tfrecords file path
     pretrain_ckpt_path = '../insight_out/1030_auroua_out/mgpu_res/ckpt/InsightFace_iter_' + str(start_count) + '.ckpt'
 
-    out_dt = '1126'
-    summary_path = '../insight_out/' + out_dt + '_continue_50w_ms1assian_s160/sgpu_res/summary'  # the summary file save path
-    ckpt_path = '../insight_out/' + out_dt + '_continue_50w_ms1assian_s160/sgpu_res/ckpt'  # the ckpt file save path
+    out_dt = '1128'
+    summary_path = '../insight_out/' + out_dt + '_ms1assian_s160/mgpu_res/summary'  # the summary file save path
+    ckpt_path = '../insight_out/' + out_dt + '_ms1assian_s160/mgpu_res/ckpt'  # the ckpt file save path
     ckpt_count_interval = 50000  # intervals to save ckpt file  # MGPU 变小/2
     # ckpt_count_interval = 10*(int(906/batch_size)+1)  # intervals to save ckpt file  # MGPU 变小/2
 
