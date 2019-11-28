@@ -92,7 +92,7 @@ if __name__ == '__main__':
     lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
     lr_values = [0.005, 0.001, 0.0005, 0.0003, 0.0001]  # learning rate to train network
     # lr_values = [0.0025, 0.0005, 0.00025, 0.00015, 0.00005]  # learning rate to train network
-    loss_s = 64
+    loss_s = 64.
     loss_m = 0.5
 
     num_output, continue_train_flag, start_count = 179721, 0, 0  # the image size
