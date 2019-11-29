@@ -2,9 +2,9 @@ import tensorflow as tf
 import tensorlayer as tl
 import argparse
 from data.mx2tfrecords import raw_parse_function, folder_parse_function
-import os
+import os, sys
 from nets.L_Resnet_E_IR_MGPU import get_resnet
-from losses.face_losses import arcface_loss
+from losses.face_losses import arcface_loss, cosineface_losses
 import time
 from data.eval_data_reader import load_bin
 from verification import ver_test
@@ -81,41 +81,47 @@ def average_gradients(tower_grads):
 
 
 if __name__ == '__main__':
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3"
 
     # 1. define global parameters
+    model_name = '1129_ms1assian_cos'
+    print(sys.path[0])
+    rt_path = sys.path[0].split('/InsightFace_TF')[0]
+    try:
+        os.mkdir(rt_path + '/insight_out')
+        os.mkdir(rt_path + '/insight_out/summary')
+        os.mkdir(rt_path + '/insight_out/ckpt')
+    except:
+        pass
     batch_size = 200  # batch size to train network
     buffer_size = 100000  # tf dataset api buffer size ?
-    # buffer_size = 2000  # tf dataset api buffer size ?
 
-    lr_steps = [40000, 60000, 80000, 100000]  # learning rate to train network
-    lr_values = [0.005, 0.001, 0.0005, 0.0003, 0.0001]  # learning rate to train network
-    # lr_values = [0.0025, 0.0005, 0.00025, 0.00015, 0.00005]  # learning rate to train network
-    loss_s = 64.
-    loss_m = 0.5
+    net_depth = 100  # resnet depth, default is 50
+    lr_steps = [40000, 60000, 80000, 100000, 150000]  # learning rate to train network
+    lr_values = [0.005, 0.001, 0.0005, 0.0003, 0.0001, 0.00005]  # learning rate to train network
+    loss_s = 30.
+    loss_m = 0.4
 
     num_output, continue_train_flag, start_count = 179721, 0, 0  # the image size
     tfrecords_file_path = '../train_data/ms1_asiancele.tfrecords'  # path to the output of tfrecords file path
-    # tfrecords_file_path = '../train_data/Asian.tfrecords'  # path to the output of tfrecords file path
     pretrain_ckpt_path = '../insight_out/1030_auroua_out/mgpu_res/ckpt/InsightFace_iter_' + str(start_count) + '.ckpt'
 
-    out_dt = '1128'
-    summary_path = '../insight_out/' + out_dt + '_ms1assian_s64/mgpu_res/summary'  # the summary file save path
-    ckpt_path = '../insight_out/' + out_dt + '_ms1assian_s64/mgpu_res/ckpt'  # the ckpt file save path
+    summary_path = '../insight_out/' + model_name + '/summary'  # the summary file save path
+    ckpt_path = '../insight_out/' + model_name + '/ckpt'  # the ckpt file save path
     ckpt_count_interval = 50000  # intervals to save ckpt file  # MGPU 变小/2
-    # ckpt_count_interval = 10*(int(906/batch_size)+1)  # intervals to save ckpt file  # MGPU 变小/2
 
     # 打印关键参数到nohup out中
-    key_para = {'batch_size': batch_size, 'buffer_size': buffer_size, 'lr_steps': lr_steps, 'lr_values': lr_values,
-                'loss_s':loss_s,'loss_m':loss_m,'num_output': num_output, 'tfrecords_file_path': tfrecords_file_path,
+    key_para = {'model_name': model_name, 'batch_size': batch_size, 'buffer_size': buffer_size, 'lr_steps': lr_steps,
+                'lr_values': lr_values, 'net_depth': net_depth,
+                'loss_s': loss_s, 'loss_m': loss_m, 'num_output': num_output,
+                'tfrecords_file_path': tfrecords_file_path,
                 'continue_train_flag': continue_train_flag, 'start_count': start_count,
-                'pretrain_ckpt_path': pretrain_ckpt_path, 'out_dt': out_dt, 'summary_path': summary_path,
+                'pretrain_ckpt_path': pretrain_ckpt_path, 'summary_path': summary_path,
                 'ckpt_path': ckpt_path, 'ckpt_count_interval': ckpt_count_interval}
     for k, v in key_para.items():
         print(k, '        ', v)
 
-    net_depth = 50  # resnet depth, default is 50
     epoch = 100000  # epoch to train the network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
@@ -190,8 +196,8 @@ if __name__ == '__main__':
                 with tf.name_scope('%s_%d' % (tower_name, iter_gpus)) as scope:
                     net = get_resnet(images_s[iter_gpus], net_depth, type='ir', w_init=w_init_method, trainable=True,
                                      keep_rate=dropout_rate)
-                    logit = arcface_loss(embedding=net.outputs, labels=labels_s[iter_gpus], w_init=w_init_method,
-                                         out_num=num_output, s= loss_s, m= loss_m)
+                    logit = cosineface_losses(embedding=net.outputs, labels=labels_s[iter_gpus], w_init=w_init_method,
+                                              out_num=num_output, s=loss_s, m=loss_m)
                     # Reuse variables for the next tower.
                     tf.get_variable_scope().reuse_variables()  # 同名变量将会复用，假设现在gpu0上创建了两个变量var0，var1，那么在gpu1上创建计算图的时候，如果还有var0和var1，则默认复用之前gpu0上的创建的那两个值
                     # define the cross entropy
@@ -256,13 +262,14 @@ if __name__ == '__main__':
     summary_op = tf.summary.merge(summaries)
 
     # Create a saver.
-    saver = tf.train.Saver(tf.global_variables(), max_to_keep=10)  # MGPU 没加 max_to_keep=args.saver_maxkeep ，加了tf.global_variables()
+    saver = tf.train.Saver(tf.global_variables(),
+                           max_to_keep=10)  # MGPU 没加 max_to_keep=args.saver_maxkeep ，加了tf.global_variables()
     # init all variables
     sess.run(tf.global_variables_initializer())
 
     if continue_train_flag == 1:
         variables_to_restore = tf.contrib.framework.get_variables_to_restore(
-            exclude=['arcface_loss'])  # 不加载包含arcface_loss的所有变量
+            exclude=['cosineface_loss'])  # 不加载包含cosineface_loss的所有变量
         print('restore premodel ...')
         restore_saver = tf.train.Saver(variables_to_restore)  # 继续训练的话，将这两行打开
         restore_saver.restore(sess, pretrain_ckpt_path)
@@ -287,18 +294,11 @@ if __name__ == '__main__':
                 pre_sec = batch_size / (end - start)
                 # print training information
                 if count > 0 and count % show_info_interval == 0:
-                    # print('epoch %d, total_step %d, total loss gpu 1 is %.2f , inference loss gpu 1 is %.2f, weight deacy '
-                    #       'loss gpu 1 is %.2f, total loss gpu 2 is %.2f , inference loss gpu 2 is %.2f, weight deacy '
-                    #       'loss gpu 2 is %.2f, training accuracy is %.6f, time %.3f samples/sec' %
-                    #       (i, count, total_loss_gpu_1, inference_loss_val_gpu_1, wd_loss_val_gpu_1, total_loss_gpu_2,
-                    #        inference_loss_val_gpu_2, wd_loss_val_gpu_2, acc_val, pre_sec))
-
                     print(time.strftime("%Y%m%d%H%M%S", time.localtime()),
-                          ' epoch %d, total_step %d, total loss: [%.2f, %.2f], inference loss: [%.2f, %.2f], weight deacy '
-                          'loss: [%.2f, %.2f], training accuracy is %.6f, time %.3f samples/sec' %
+                          ' epoch %d, tt_step %d, tt_loss: [%.2f, %.2f], f_loss: [%.2f, %.2f], wl2_loss: [%.2f, %.2f], train acc: %.6f' %
                           (i, count, total_loss_gpu_1, total_loss_gpu_2, inference_loss_val_gpu_1,
                            inference_loss_val_gpu_2,
-                           wd_loss_val_gpu_1, wd_loss_val_gpu_2, acc_val, pre_sec))
+                           wd_loss_val_gpu_1, wd_loss_val_gpu_2, acc_val))
                 count += 1
 
                 # save summary
@@ -309,7 +309,7 @@ if __name__ == '__main__':
 
                 # save ckpt files
                 if count > 0 and count % ckpt_count_interval == 0:
-                    filename = 'InsightFace_iter_'+str(count)+'-'+str(i) + '.ckpt'
+                    filename = 'InsightFace_iter_' + str(count) + '-' + str(i) + '.ckpt'
                     filename = os.path.join(ckpt_path, filename)
                     saver.save(sess, filename)
                 # # validate
