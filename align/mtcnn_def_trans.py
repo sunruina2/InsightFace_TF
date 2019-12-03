@@ -11,12 +11,10 @@ import math
 import os
 from skimage import transform as trans
 import cv2
+
 # fontpath = "/data/sunruina/face_rg/face_rg_server" + "/data_pro/wryh.ttf"  # 32为字体大小
 
 exe_path = os.path.abspath(__file__)
-# fontpath = str(exe_path.split('face_rg_server/')[0]) + 'face_rg_server/' + "data_pro/wryh.ttf"
-fontpath = str(exe_path.split('face_rg_server_new/')[0]) + 'face_rg_server_new/' + "data_pro/wryh.ttf"
-font22 = ImageFont.truetype(fontpath, 22)
 mark_color = (225, 209, 0)
 
 
@@ -143,7 +141,7 @@ def hisEqulColor1(img):
 
 
 def load_and_align_data(image, det_4para, minsize=100, threshold=[0.65, 0.7, 0.7], factor=0.709,
-                        gama_flag=0):  # 返回彩图
+                        gama_flag=0, anti_flag=1):  # 返回彩图
     # face detection parameters
     # 以下两个阈值调整后，歪脸和遮挡会被过滤掉
 
@@ -176,9 +174,12 @@ def load_and_align_data(image, det_4para, minsize=100, threshold=[0.65, 0.7, 0.7
         det_f[:, 2] = np.minimum(det_f[:, 2], img_size[1])
         det_f[:, 3] = np.minimum(det_f[:, 3], img_size[0])
         det_f = det_f.astype(int)
-
-        crop_at, points_5_crop_at = align_face(image, bounding_boxes, points_5, det_4para[0], det_4para[1])  # 活体尺寸
         crop_rg, points_5_crop_rg = align_face(image, bounding_boxes, points_5, det_4para[2], det_4para[3])  # 识别尺寸
+
+        if anti_flag == 1:
+            crop_at, points_5_crop_at = align_face(image, bounding_boxes, points_5, det_4para[0], det_4para[1])  # 活体尺寸
+        else:
+            crop_at, points_5_crop_at = np.asarray([0]), np.asarray([0])
         crop_at, crop_rg = np.stack(crop_at), np.stack(crop_rg)
 
         return det_f, crop_at, points_5_crop_at, crop_rg, points_5_crop_rg, 1
@@ -267,7 +268,8 @@ def align_face(img, _bbox_raw, _landmark_raw, _image_size, _extend_p):
     p5 = np.zeros((num, 5, 2))
 
     for i in range(num):
-        warped[i, :], p5[i, :] = preprocess(img, bbox=_bbox_raw[i], landmark=_landmark[i], image_size=_image_size, extend_p=_extend_p)
+        warped[i, :], p5[i, :] = preprocess(img, bbox=_bbox_raw[i], landmark=_landmark[i], image_size=_image_size,
+                                            extend_p=_extend_p)
 
     return warped, p5
 
@@ -284,13 +286,13 @@ def preprocess(img, bbox=None, landmark=None, image_size=112, extend_p=0.0):
         [70.7299, 92.2041]], dtype=np.float32)
 
     if image_size != 112:
-        norm_any_p5 = norm112_112_p5 * (256/112)
+        norm_any_p5 = norm112_112_p5 * (256 / 112)
     else:
         norm_any_p5 = norm112_112_p5
     # print(norm_any_p5)
     if extend_p != 0.0:
         extend_size = int(image_size * (1 + extend_p))
-        norm_any_p5 = norm_any_p5 + int((extend_size-image_size)/2)  # 如果需要延伸脸周围20%的区域，则在112的标准尺寸上进行放大
+        norm_any_p5 = norm_any_p5 + int((extend_size - image_size) / 2)  # 如果需要延伸脸周围20%的区域，则在112的标准尺寸上进行放大
     else:
         norm_any_p5 = norm_any_p5
         extend_size = image_size
@@ -318,23 +320,12 @@ def preprocess(img, bbox=None, landmark=None, image_size=112, extend_p=0.0):
         return ret, landmark
     else:  # do align using landmark
         warped = cv2.warpAffine(img, M, (extend_size, extend_size), borderValue=0.0)
-        move_dictance = int((112*extend_p)/2)
-        landmark = np.asarray(norm112_112_p5+move_dictance, dtype=int)
+        move_dictance = int((112 * extend_p) / 2)
+        landmark = np.asarray(norm112_112_p5 + move_dictance, dtype=int)
 
         warped = cv2.resize(warped, (image_size, image_size))
-        landmark = np.asarray(landmark * (1/(1+extend_p)), dtype=int)
+        landmark = np.asarray(landmark * (1 / (1 + extend_p)), dtype=int)
         return warped, landmark
-
-
-def cv2_write_simsun(cv2_img, loc, text_china, char_color):
-    # 设置需要显示的字体
-    img_pil = Image.fromarray(cv2_img)
-    draw = ImageDraw.Draw(img_pil)
-    # 绘制文字信息<br># (100,300/350)为字体的位置，(255,255,255)为白色，(0,0,0)为黑色颜色顺序为RGB
-    draw.text(loc, text_china, font=font22, fill=char_color)
-    cv2_img_new = np.array(img_pil)
-
-    return cv2_img_new
 
 
 def mark_face_points(points_lst, f_pics):
@@ -452,7 +443,8 @@ if __name__ == '__main__':
     '''两级目录 大量数据人脸数据集'''
     st = time.time()
 
-    pics_path = '/Users/finup/Desktop/rg/train_data/train_celebrity/celebrity_sample'
+    # pics_path = '/Users/finup/Desktop/rg/train_data/train_celebrity/celebrity_sample'
+    pics_path = ''
 
     image_size = (112, 112)
     print('pic reading %s' % pics_path)
@@ -470,11 +462,13 @@ if __name__ == '__main__':
         pass
 
     n_i, mtcnn_1, mtcnn_0 = 0, 0, 0
-    for peo in paths:
-        peo_pics = list(os.listdir(pics_path + '/' + peo + '/'))
+    all_peopleN = len(paths)
+    print('all_people:', len(paths))
+    for peo_i in range(all_peopleN):
+        peo_pics = list(os.listdir(pics_path + '/' + paths[peo_i] + '/'))
         if '.DS_Store' in peo_pics:  # 去掉不为jpg和png格式的mac os系统文件
             peo_pics.remove('.DS_Store')
-        peo_pkg = pics_path + '_trans/' + peo + '/'
+        peo_pkg = pics_path + '_trans/' + paths[peo_i] + '/'
         try:
             os.mkdir(peo_pkg)
         except:
@@ -482,17 +476,19 @@ if __name__ == '__main__':
         nn = len(peo_pics)
         for i in range(nn):
             n_i += 1
-            p_path = pics_path + '/' + peo + '/' + peo_pics[i]
+            p_path = pics_path + '/' + paths[peo_i] + '/' + peo_pics[i]
             f_pic = cv2.imread(p_path)
-
-            dets, crop_images, point5 = load_and_align_data(f_pic, 112, trans_flag=1, minsize=90)
+            det_4para = [256, 0.2, 112, 0.0]
+            det_f, _, _, crop_images, points_5, det_flag = load_and_align_data(f_pic, det_4para, minsize=100,
+                                                                               threshold=[0.65, 0.7, 0.7], factor=0.709,
+                                                                               gama_flag=0, anti_flag=0)
             # 获取人脸, 由于frame色彩空间rgb不对应问题，需统一转为灰色图片
             if len(crop_images) != 0:
                 to_picpath = peo_pkg + peo_pics[i]
                 cv2.imwrite(to_picpath, crop_images[0])
                 mtcnn_1 += 1
             else:
-                peo_pkg_no = pics_path + '_trans_no/' + peo + '/'
+                peo_pkg_no = pics_path + '_trans_no/' + paths[peo_i] + '/'
                 try:
                     os.mkdir(peo_pkg_no)
                 except:
@@ -502,8 +498,8 @@ if __name__ == '__main__':
                 cv2.imwrite(to_picpath_no, f_pic)
                 mtcnn_0 += 1
 
-            if n_i % 1 == 0:
-                print('finish n: ', n_i, 'notfound n: ', mtcnn_0)
+        if n_i % 3 == 0:
+            print('Finish peo_n: ', peo_i, all_peopleN, np.round(peo_i / all_peopleN, 2), '  Notfound pic_n: ', mtcnn_0)
 
     print('finish time:', int(time.time() - st))
 

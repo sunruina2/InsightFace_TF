@@ -97,11 +97,12 @@ if __name__ == '__main__':
     batch_size = 200  # batch size to train network
     buffer_size = 100000  # tf dataset api buffer size ?
 
-    net_depth = 100  # resnet depth, default is 50
+    net_depth = 50  # resnet depth, default is 50
     lr_steps = [40000, 60000, 80000, 100000, 150000]  # learning rate to train network
     lr_values = [0.005, 0.001, 0.0005, 0.0003, 0.0001, 0.00005]  # learning rate to train network
     loss_s = 30.
     loss_m = 0.4
+    is_seblock=0
 
     num_output, continue_train_flag, start_count = 179721, 0, 0  # the image size
     tfrecords_file_path = '../train_data/ms1_asiancele.tfrecords'  # path to the output of tfrecords file path
@@ -109,11 +110,11 @@ if __name__ == '__main__':
 
     summary_path = '../insight_out/' + model_name + '/summary'  # the summary file save path
     ckpt_path = '../insight_out/' + model_name + '/ckpt'  # the ckpt file save path
-    ckpt_count_interval = 50000  # intervals to save ckpt file  # MGPU 变小/2
+    ckpt_count_interval = 20000  # intervals to save ckpt file  # MGPU 变小/2
 
     # 打印关键参数到nohup out中
     key_para = {'model_name': model_name, 'batch_size': batch_size, 'buffer_size': buffer_size, 'lr_steps': lr_steps,
-                'lr_values': lr_values, 'net_depth': net_depth,
+                'lr_values': lr_values, 'net_depth': net_depth, 'is_seblock': is_seblock,
                 'loss_s': loss_s, 'loss_m': loss_m, 'num_output': num_output,
                 'tfrecords_file_path': tfrecords_file_path,
                 'continue_train_flag': continue_train_flag, 'start_count': start_count,
@@ -183,6 +184,10 @@ if __name__ == '__main__':
     # 3.3 define the optimize method
     opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=momentum)
 
+    if is_seblock==1:
+        is_seblock = 'se_ir'
+    else:
+        is_seblock = 'ir'
     # MGPU-start
     # Calculate the gradients for each model tower.
     tower_grads = []  # 保存来自不同GPU计算出的梯度、loss列表
@@ -194,7 +199,7 @@ if __name__ == '__main__':
         for iter_gpus in num_gpus:
             with tf.device('/gpu:%d' % iter_gpus):
                 with tf.name_scope('%s_%d' % (tower_name, iter_gpus)) as scope:
-                    net = get_resnet(images_s[iter_gpus], net_depth, type='ir', w_init=w_init_method, trainable=True,
+                    net = get_resnet(images_s[iter_gpus], net_depth, type=is_seblock, w_init=w_init_method, trainable=True,
                                      keep_rate=dropout_rate)
                     logit = cosineface_losses(embedding=net.outputs, labels=labels_s[iter_gpus], w_init=w_init_method,
                                               out_num=num_output, s=loss_s, m=loss_m)
