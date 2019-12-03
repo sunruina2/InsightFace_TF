@@ -378,7 +378,7 @@ print('Creating networks and loading parameters')
 gpu_config = tf.ConfigProto()
 gpu_config.allow_soft_placement = True
 gpu_config.gpu_options.allow_growth = True
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 
 with tf.Graph().as_default():
     sess = tf.Session(config=gpu_config)
