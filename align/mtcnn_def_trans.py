@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
 import numpy as np
-from align import detect_face_mdoel
+from align.detect_face_mdoel import *
 from os.path import join as pjoin
 import time
 from PIL import ImageFont, ImageDraw, Image
@@ -162,7 +162,7 @@ def load_and_align_data(image, det_4para, minsize=100, threshold=[0.65, 0.7, 0.7
     img = to_rgb(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
     img_size = np.asarray(img.shape)[0:2]
     # 返回边界框数组 （参数分别是输入图片 脸部最小尺寸 三个网络 阈值 ）
-    bounding_boxes, points_5 = detect_face_mdoel.detect_face(img, minsize, pnet, rnet, onet, threshold, factor)
+    bounding_boxes, points_5 = detect_face(img, minsize, pnet, rnet, onet, threshold, factor)
     # bounding_boxes=[[x1,y1,x2,y2,score], [x1,y1,x2,y2,score]]，points_5 = [[x1左眼，x2左眼], [x1右眼，x2右眼], [x1鼻子，x2鼻子], [x左嘴角，..], [x右嘴角, ..], [ y左眼，..], [y右眼，..], [y鼻子，..], [y左嘴角，..], [y右嘴角, ..]]
     if len(bounding_boxes) < 1:
         return np.asarray([]), np.asarray([]), np.asarray([]), np.asarray([]), np.asarray([]), 0
@@ -339,38 +339,6 @@ def mark_face_points(points_lst, f_pics):
     return f_pics
 
 
-def mark_pic(det_lst, name_lst, pic):
-    face_area_r_lst = []
-    c_size = 22
-    for f_i in range(len(det_lst)):
-        bw = det_lst[f_i, 2] - det_lst[f_i, 0]  # (240, 248, 255)
-        cv2.line(pic, (det_lst[f_i, 0], det_lst[f_i, 1]), (det_lst[f_i, 0] + int(bw * 0.20), det_lst[f_i, 1]),
-                 mark_color, 2)  # 颜色是BGR顺序
-        cv2.line(pic, (det_lst[f_i, 0], det_lst[f_i, 1]), (det_lst[f_i, 0], det_lst[f_i, 1] + int(bw * 0.20)),
-                 mark_color, 2)
-        cv2.line(pic, (det_lst[f_i, 0], det_lst[f_i, 3]), (det_lst[f_i, 0] + int(bw * 0.20), det_lst[f_i, 3]),
-                 mark_color, 2)
-        cv2.line(pic, (det_lst[f_i, 0], det_lst[f_i, 3]), (det_lst[f_i, 0], det_lst[f_i, 3] - int(bw * 0.20)),
-                 mark_color, 2)
-        cv2.line(pic, (det_lst[f_i, 2], det_lst[f_i, 1]), (det_lst[f_i, 2] - int(bw * 0.20), det_lst[f_i, 1]),
-                 mark_color, 2)
-        cv2.line(pic, (det_lst[f_i, 2], det_lst[f_i, 1]), (det_lst[f_i, 2], det_lst[f_i, 1] + int(bw * 0.20)),
-                 mark_color, 2)
-        cv2.line(pic, (det_lst[f_i, 2], det_lst[f_i, 3]), (det_lst[f_i, 2] - int(bw * 0.20), det_lst[f_i, 3]),
-                 mark_color, 2)
-        cv2.line(pic, (det_lst[f_i, 2], det_lst[f_i, 3]), (det_lst[f_i, 2], det_lst[f_i, 3] - int(bw * 0.20)),
-                 mark_color, 2)
-        # cv2.rectangle(pic, (det_lst[f_i, 0], det_lst[f_i, 1]),
-        #               (det_lst[f_i, 2], det_lst[f_i, 3]), (240, 248, 255), thickness=2, lineType=8, shift=0)  # 在抓取的图片frame上画矩形
-        pic = cv2_write_simsun(pic, loc=(det_lst[f_i, 0] + 8, det_lst[f_i, 1] - c_size - 8), text_china=name_lst[f_i],
-                               char_color=mark_color)
-
-        # 计算人脸占画面的面积
-        area_ir = ((det_lst[f_i, 2] - det_lst[f_i, 0]) * (det_lst[f_i, 3] - det_lst[f_i, 1])) / (len(pic) * len(pic[0]))
-        face_area_r_lst.append(area_ir)
-    return pic, face_area_r_lst
-
-
 # 创建mtcnn网络，并加载参数
 print('Creating networks and loading parameters')
 
@@ -383,7 +351,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 with tf.Graph().as_default():
     sess = tf.Session(config=gpu_config)
     with sess.as_default():
-        pnet, rnet, onet = detect_face_mdoel.create_mtcnn(sess, None)
+        pnet, rnet, onet = create_mtcnn(sess, None)
 
 if __name__ == '__main__':
     '''单张图片'''
@@ -444,7 +412,7 @@ if __name__ == '__main__':
     st = time.time()
 
     # pics_path = '/Users/finup/Desktop/rg/train_data/train_celebrity/celebrity_sample'
-    pics_path = ''
+    pics_path = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/train_celebrity/celebrity_sample_246'
 
     image_size = (112, 112)
     print('pic reading %s' % pics_path)
