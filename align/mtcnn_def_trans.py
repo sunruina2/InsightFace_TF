@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
 import numpy as np
-from align.detect_face_mdoel import *
+from detect_face_mdoel import *
 from os.path import join as pjoin
 import time
 from PIL import ImageFont, ImageDraw, Image
@@ -413,6 +413,7 @@ if __name__ == '__main__':
 
     # pics_path = '/Users/finup/Desktop/rg/train_data/train_celebrity/celebrity_sample'
     pics_path = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/train_celebrity/celebrity_sample_246'
+    pics_path = '/data/sunruina/face_recognition/data_set/ms_celeb_arcpaper_tfrecords/train_data/train_celebrity/celebrity'
 
     image_size = (112, 112)
     print('pic reading %s' % pics_path)
@@ -466,7 +467,7 @@ if __name__ == '__main__':
                 cv2.imwrite(to_picpath_no, f_pic)
                 mtcnn_0 += 1
 
-        if n_i % 3 == 0:
+        if n_i % 1000 == 0:
             print('Finish peo_n: ', peo_i, all_peopleN, np.round(peo_i / all_peopleN, 2), '  Notfound pic_n: ', mtcnn_0)
 
     print('finish time:', int(time.time() - st))
