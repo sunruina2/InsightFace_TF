@@ -467,7 +467,7 @@ if __name__ == '__main__':
                 cv2.imwrite(to_picpath_no, f_pic)
                 mtcnn_0 += 1
 
-        if n_i % 1000 == 0:
+        if n_i % 50 == 0:
             print('Finish peo_n: ', peo_i, all_peopleN, np.round(peo_i / all_peopleN, 2), '  Notfound pic_n: ', mtcnn_0)
 
     print('finish time:', int(time.time() - st))
