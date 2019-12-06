@@ -6,7 +6,7 @@ import math
 
 
 def arcface_loss_val(embedding, labels, weights, out_num, s=64., m=0.5):
-    '''
+    '''embedding, labels, out_num, w_init=None, s=30., m=0.4
     :param embedding: the input embedding vectors
     :param labels:  the input labels, the shape should be eg: (batch_size, 1)
     :param s: scalar value default is 64

@@ -3,7 +3,7 @@ import math
 
 
 def arcface_loss(embedding, labels, out_num, w_init=None, s=64.,
-                 m=0.5):  # embedding=emb, labels=labels, w_init=w_init_method, out_num=num_classes
+                 m=0.5):  # (embedding, labels, out_num, w_init=None, s=30., m=0.4)
     '''
     :param embedding: the input embedding vectors
     :param labels:  the input labels, the shape should be eg: (batch_size, 1)

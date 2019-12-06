@@ -85,7 +85,7 @@ if __name__ == '__main__':
     # os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3"
 
     # 1. define global parameters
-    model_name = '1206_ms1assian_align'
+    model_name = '1206_ms1assian_align_arc'
     print(sys.path[0])
     rt_path = sys.path[0].split('/InsightFace_TF')[0]
     try:
@@ -94,23 +94,25 @@ if __name__ == '__main__':
         os.mkdir(rt_path + '/insight_out/ckpt')
     except:
         pass
-    batch_size = 200  # batch size to train network
+    batch_size = 220  # batch size to train network
     buffer_size = 100000  # tf dataset api buffer size ?
 
     net_depth = 50  # resnet depth, default is 50
     lr_steps = [40000, 60000, 80000, 100000, 150000]  # learning rate to train network
     lr_values = [0.005, 0.001, 0.0005, 0.0003, 0.0001, 0.00005]  # learning rate to train network
-    loss_s = 30.
-    loss_m = 0.4
-    is_seblock = 0
 
-    num_output, continue_train_flag, start_count = 93979+85742, 0, 0  # the image size
+    loss_s = 128
+    loss_m = 0.5
+    is_seblock = 0
+    is_arcloss = 1
+
+    num_output, continue_train_flag, start_count = 93979 + 85742, 0, 0  # the image size
     tfrecords_file_path = '../train_data/ms1_asiancele_align.tfrecords'  # path to the output of tfrecords file path
     pretrain_ckpt_path = '../insight_out/1030_auroua_out/mgpu_res/ckpt/InsightFace_iter_' + str(start_count) + '.ckpt'
 
     summary_path = '../insight_out/' + model_name + '/summary'  # the summary file save path
     ckpt_path = '../insight_out/' + model_name + '/ckpt'  # the ckpt file save path
-    ckpt_count_interval = 20000  # intervals to save ckpt file  # MGPU 变小/2
+    ckpt_count_interval = 50000  # intervals to save ckpt file  # MGPU 变小/2
 
     # 打印关键参数到nohup out中
     key_para = {'model_name': model_name, 'batch_size': batch_size, 'buffer_size': buffer_size, 'lr_steps': lr_steps,
@@ -126,7 +128,7 @@ if __name__ == '__main__':
     epoch = 100000  # epoch to train the network
     momentum = 0.9  # learning alg momentum
     weight_deacy = 5e-4  # learning alg momentum
-    eval_datasets = ['lfw', 'cplfw', 'agedb_30']  # evluation datasets
+    eval_datasets = ['lfw', 'cplfw']  # evluation datasets
     eval_db_path = '../ver_data'  # evluate datasets base path
     image_size = [112, 112]  # the image size
     saver_maxkeep = 100  # tf.train.Saver max keep ckpt files
@@ -202,8 +204,13 @@ if __name__ == '__main__':
                     net = get_resnet(images_s[iter_gpus], net_depth, type=is_seblock, w_init=w_init_method,
                                      trainable=True,
                                      keep_rate=dropout_rate)
-                    logit = cosineface_losses(embedding=net.outputs, labels=labels_s[iter_gpus], w_init=w_init_method,
-                                              out_num=num_output, s=loss_s, m=loss_m)
+                    if is_arcloss == 1:
+                        logit = arcface_loss(embedding=net.outputs, labels=labels[iter_gpus], w_init=w_init_method,
+                                             out_num=num_output, s=loss_s, m=loss_m)
+                    else:
+                        logit = cosineface_losses(embedding=net.outputs, labels=labels_s[iter_gpus],
+                                                  w_init=w_init_method,
+                                                  out_num=num_output, s=loss_s, m=loss_m)
                     # Reuse variables for the next tower.
                     tf.get_variable_scope().reuse_variables()  # 同名变量将会复用，假设现在gpu0上创建了两个变量var0，var1，那么在gpu1上创建计算图的时候，如果还有var0和var1，则默认复用之前gpu0上的创建的那两个值
                     # define the cross entropy
