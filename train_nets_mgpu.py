@@ -85,7 +85,7 @@ if __name__ == '__main__':
     # os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3"
 
     # 1. define global parameters
-    model_name = '1129_ms1assian_cos'
+    model_name = '1206_ms1assian_align'
     print(sys.path[0])
     rt_path = sys.path[0].split('/InsightFace_TF')[0]
     try:
@@ -102,10 +102,10 @@ if __name__ == '__main__':
     lr_values = [0.005, 0.001, 0.0005, 0.0003, 0.0001, 0.00005]  # learning rate to train network
     loss_s = 30.
     loss_m = 0.4
-    is_seblock=0
+    is_seblock = 0
 
-    num_output, continue_train_flag, start_count = 179721, 0, 0  # the image size
-    tfrecords_file_path = '../train_data/ms1_asiancele.tfrecords'  # path to the output of tfrecords file path
+    num_output, continue_train_flag, start_count = 93979+85742, 0, 0  # the image size
+    tfrecords_file_path = '../train_data/ms1_asiancele_align.tfrecords'  # path to the output of tfrecords file path
     pretrain_ckpt_path = '../insight_out/1030_auroua_out/mgpu_res/ckpt/InsightFace_iter_' + str(start_count) + '.ckpt'
 
     summary_path = '../insight_out/' + model_name + '/summary'  # the summary file save path
@@ -184,7 +184,7 @@ if __name__ == '__main__':
     # 3.3 define the optimize method
     opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=momentum)
 
-    if is_seblock==1:
+    if is_seblock == 1:
         is_seblock = 'se_ir'
     else:
         is_seblock = 'ir'
@@ -199,7 +199,8 @@ if __name__ == '__main__':
         for iter_gpus in num_gpus:
             with tf.device('/gpu:%d' % iter_gpus):
                 with tf.name_scope('%s_%d' % (tower_name, iter_gpus)) as scope:
-                    net = get_resnet(images_s[iter_gpus], net_depth, type=is_seblock, w_init=w_init_method, trainable=True,
+                    net = get_resnet(images_s[iter_gpus], net_depth, type=is_seblock, w_init=w_init_method,
+                                     trainable=True,
                                      keep_rate=dropout_rate)
                     logit = cosineface_losses(embedding=net.outputs, labels=labels_s[iter_gpus], w_init=w_init_method,
                                               out_num=num_output, s=loss_s, m=loss_m)
